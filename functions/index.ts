@@ -5,6 +5,10 @@ import { SignJWT, jwtVerify } from 'jose';
 type Bindings = {
   DATABASE_URL: string;
   JWT_SECRET: string;
+  AWS_ACCESS_KEY_ID: string;
+  AWS_SECRET_ACCESS_KEY: string;
+  AWS_ENDPOINT_URL_S3: string;
+  AWS_REGION: string;
 };
 type Variables = {
   username: string;
@@ -51,7 +55,7 @@ async function verifyToken(token: string, secret: string) {
 // ============================================================
 // Middleware: Proteksi endpoint yang butuh token
 // ============================================================
-const protectedPaths = ['/ncr', '/ncr/*', '/auditors'];
+const protectedPaths = ['/ncr', '/ncr/*', '/auditors', '/upload/*'];
 protectedPaths.forEach(path => {
   app.use(path, async (c, next) => {
     const authHeader = c.req.header('Authorization');
@@ -509,6 +513,7 @@ app.patch('/ncr/:id', async (c) => {
       addField('sorting_repair_rework_required', data.sortingRepairReworkRequired);
       addField('sorting_rework_pic', data.sortingReworkPIC);
       addField('nc_picture', data.ncPicture);
+      addField('ok_picture', data.okPicture);
     }
 
     if (step === 'D3') {
@@ -593,4 +598,67 @@ app.patch('/ncr/:id', async (c) => {
     return c.json({ status: 'error', message: err.message }, 500);
   }
 });
+
+// ============================================================
+// Endpoint: POST /upload/presign — generate presigned URL
+// ============================================================
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+app.post('/upload/presign', async (c) => {
+  try {
+    const body = await c.req.json();
+    const filename = (body.filename || '').trim();
+    const contentType = (body.contentType || 'image/jpeg').trim();
+    const idNo = (body.idNo || '').trim();
+    const kind = (body.kind || 'nc').trim(); // 'nc' atau 'ok'
+    
+    if (!filename) {
+      return c.json({ status: 'error', message: 'filename wajib diisi' }, 400);
+    }
+
+    // Setup S3 client
+    const s3 = new S3Client({
+      region: c.env.AWS_REGION,
+      endpoint: c.env.AWS_ENDPOINT_URL_S3,
+      credentials: {
+        accessKeyId: c.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: c.env.AWS_SECRET_ACCESS_KEY,
+      },
+      forcePathStyle: true,
+    });
+
+    // Generate key (path) di bucket
+    const timestamp = Date.now();
+    const cleanName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const prefix = idNo ? `${idNo}/` : 'misc/';
+    const key = `${prefix}${kind}_${timestamp}_${cleanName}`;
+
+    // Buat presigned URL untuk PUT (berlaku 5 menit)
+    const command = new PutObjectCommand({
+      Bucket: 'ncr-images',
+      Key: key,
+      ContentType: contentType,
+    });
+
+    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
+
+    // URL publik untuk baca
+    const endpoint = c.env.AWS_ENDPOINT_URL_S3.replace(/\/$/, '');
+    const publicUrl = `${endpoint}/ncr-images/${key}`;
+
+    return c.json({
+      status: 'ok',
+      uploadUrl,
+      publicUrl,
+      key,
+      expiresIn: 300,
+    });
+
+  } catch (err: any) {
+    console.error('POST /upload/presign error:', err);
+    return c.json({ status: 'error', message: err.message }, 500);
+  }
+});
+
 export default app;
