@@ -4434,71 +4434,73 @@ async function handleImg(event, i) {
 // ==========================================
 // Helper: Konversi PascalCase → camelCase berdasarkan step
 // ==========================================
+// ==========================================
+// Helper: Konversi dari field ID → camelCase berdasarkan step
+// ==========================================
 function convertToCamelCase(raw, step) {
   const mapping = {
     D2: {
-      'IssuedBy': 'issuedBy',
-      'ShiftTime': 'shiftTime',
-      'PartNo': 'partNo',
-      'CustomerName': 'customerName',
-      'DetectionLocation': 'detectionLocation',
-      'AffectedQty': 'affectedQty',
-      'SamplingQty': 'samplingQty',
-      'RejectQtyDeclated': 'rejectQtyDeclared',
-      'NCMode': 'ncMode',
-      'NCCatagory': 'ncCategory',
-      'DetailNC': 'detailNC',
-      'HowItDetected': 'howItDetected',
-      'InterimAction': 'interimAction',
-      'SortingRepairReworkRequired': 'sortingRepairReworkRequired',
-      'SortingReworkPIC': 'sortingReworkPIC',
-      'NCPicture': 'ncPicture'
+      'fuViewIssuedBy': 'issuedBy',
+      'fuViewShiftTime': 'shiftTime',
+      'fuViewPartNo': 'partNo',
+      'fuViewCustomerName': 'customerName',
+      'fuViewLocation': 'detectionLocation',
+      'fuViewAffectedQty': 'affectedQty',
+      'fuViewSampleQty': 'samplingQty',
+      'fuViewNcQty': 'rejectQtyDeclared',
+      'fuViewNcMode': 'ncMode',
+      'fuViewNcCategory': 'ncCategory',
+      'fuViewDetailNC': 'detailNC',
+      'fuViewHowDetected': 'howItDetected',
+      'fuViewInterimAct': 'interimAction',
+      'fuViewSortingRequired': 'sortingRepairReworkRequired',
+      'fuViewSortingPIC': 'sortingReworkPIC'
     },
     D3: {
-      'InterimActBy': 'interimActBy',
-      'InterimActionDate': 'interimActionDate',
-      'InterimRemarks': 'interimRemarks',
-      'TotalOK': 'totalOK',
-      'FinalRejectQty': 'finalRejectQty',
-      'TotalManHour': 'totalManHour'
+      'fuInterimActBy': 'interimActBy',
+      'fuInterimDate': 'interimActionDate',
+      'fuInterimRemarks': 'interimRemarks',
+      'fuTotalOK': 'totalOK',
+      'fuQtyReject': 'finalRejectQty',
+      'fuManHours': 'totalManHour'
     },
     D4: {
-      'RootCauseOcc': 'rootCauseOcc',
-      'RootCause(Escape)': 'rootCauseEscape',
-      '5M1E-Factor': 'factor5m1e',
-      'RC-AnalysisBy': 'rcAnalysisBy',
-      'RC-AnalysisDate': 'rcAnalysisDate'
+      'fuRootCauseOcc': 'rootCauseOcc',
+      'fuRootCauseSkip': 'rootCauseEscape',
+      'fuRCFactor': 'factor5m1e',
+      'fuPicD4': 'rcAnalysisBy',
+      'fuRCAdate': 'rcAnalysisDate'
     },
     D5: {
-      'CorrectiveActOccur': 'correctiveActOccur',
-      'CorrectiveActSkip': 'correctiveActSkip',
-      'CABy': 'caBy',
-      'CADate': 'caDate'
+      'fuCAOcc': 'correctiveActOccur',
+      'fuCASkip': 'correctiveActSkip',
+      'fuPicD5': 'caBy',
+      'fuCAdate': 'caDate'
     },
     D6: {
-      'ValidationCAOcc': 'validationCaOcc',
-      'ValidationCASkip': 'validationCaSkip',
-      'ValidateCAPABy': 'validateCapaBy',
-      'ValidateCAPADate': 'validateCapaDate',
-      'ValidationResult': 'validationResult'
+      'fuValOcc': 'validationCaOcc',
+      'fuValSkip': 'validationCaSkip',
+      'fuPicD6': 'validateCapaBy',
+      'fuValDate': 'validateCapaDate',
+      'fuValRslt': 'validationResult'
     },
     D7: {
-      'PAOcc': 'paOcc',
-      'PASkip': 'paSkip',
-      'PABy': 'paBy',
-      'PADate': 'paDate'
+      'fuPAOcc': 'paOcc',
+      'fuPASkip': 'paSkip',
+      'fuPicD7': 'paBy',
+      'fuPADate': 'paDate'
     },
     D8: {
-      'ApprovedBy': 'approvedBy',
-      'CloseDate': 'closeDate',
-      'CongratulationMsg': 'congratulationMsg',
-      'StatusNC': 'statusNC'
+      'fuPicD8': 'approvedBy',
+      'fuCloseDate': 'closeDate',
+      'fuCongMsg': 'congratulationMsg',
+      'fuStatusNC': 'statusNC'
     }
   };
-  
+
   const stepMap = mapping[step];
   if (!stepMap) return raw;
-  
+
   const result = {};
   for (const [key, value] of Object.entries(raw)) {
     const newKey = stepMap[key] || key;
