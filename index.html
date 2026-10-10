@@ -1988,20 +1988,26 @@ function filterDashboard(cat) {
 // ==========================================
 // loadAuditors() TETAP DIPERTAHANKAN (dipakai terpisah di openFollowUpFromRow
 // & updatePIC saat butuh refresh list auditor tanpa reload semua data)
+// ==========================================
+// 6. FUNGSI AUDITOR
+// ==========================================
 async function loadAuditors() {
   try {
-    const response = await fetch(`${API_URL}?action=getAuditors`);
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_URL}/auditors`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     const res = await response.json();
 
     if (res.status === 'ok' && res.rows && res.rows.length > 0) {
       auditorList = res.rows;
       fillAuditorDropdowns(auditorList);
-      // 🔥 Selalu restore pilihan dropdown D1 kalau sedang di halaman Follow-up
-      //    (menjaga dari proses lain yang memanggil loadAuditors() tanpa disadari)
+      // Restore pilihan dropdown D1 kalau sedang di halaman Follow-up
       if (document.getElementById('followUpPage').style.display === 'block') {
         fillD1DropdownsFromSection();
       }
     } else {
+      console.warn('⚠️ Auditor list kosong, pakai fallback');
       setFallbackAuditors();
     }
   } catch(e) {
@@ -2155,7 +2161,10 @@ async function loadPICData() {
     
     try {
         // ===== STEP 1: AMBIL DATA DARI GOOGLE SHEET =====
-        const response = await fetch(`${API_URL}?action=getPICData`);
+       const token = localStorage.getItem('authToken');
+const response = await fetch(`${API_URL}/ncr`, {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
         const res = await response.json();
         
         if (res.status === 'ok' && res.data) {
