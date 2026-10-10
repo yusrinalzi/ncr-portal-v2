@@ -2306,8 +2306,11 @@ function getFormDataByStep(step) {
   return data;
 }
 
+// ==========================================
+// SUBMIT FOLLOW-UP (D2-D8) — v2 (Neon)
+// ==========================================
 async function submitFollowUp(step) {
- // ✅ TAMBAHKAN INI DI PALING ATAS
+  // Cek guest
   if (currentUser?.isGuest) {
     alert('⚠️ Guest tidak dapat melakukan perubahan data.');
     return;
@@ -2325,50 +2328,63 @@ async function submitFollowUp(step) {
     alert('❌ Error: Data form tidak ditemukan');
     return;
   }
+
+  // Konversi dari PascalCase → camelCase (untuk endpoint baru)
+const formData = convertToCamelCase(rawFormData, step);
+
+  // Ambil token
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    alert('⚠️ Sesi login habis. Silakan login ulang.');
+    doLogout();
+    return;
+  }
   
-  // Siapkan payload
+  // Payload untuk endpoint baru
   const payload = {
-    action: 'updateNCR',
-    idNo: currentFollowUpId,
     step: step,
-    data: formData,
-    timestamp: new Date().toISOString(),
-    updatedBy: currentUser ? currentUser.name : 'Guest'
+    data: formData
   };
   
   console.log(`📤 Submitting ${step}:`, payload);
   
   try {
-    // Kirim ke API
-    await fetch(API_URL, {
-  method: 'POST',
-  headers: { 'Content-Type': 'text/plain' },  // Tetap text/plain untuk hindari preflight
-  body: JSON.stringify(payload)
-});
+    // Kirim ke Neon Function
+    const response = await fetch(`${API_URL}/ncr/${currentFollowUpId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await response.json();
+    
+    if (result.status !== 'ok') {
+      throw new Error(result.message || 'Unknown error');
+    }
     
     alert(`✅ ${step} submitted successfully!`);
     
-    // Update status lokal
-    const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
-    if (ncr) {
-      if (step === 'D8') {
-        const status = document.getElementById('fuValRslt').value;
-        ncr.StatusNC = status === 'Closed' ? 'Closed' : 'In Progress';
-      } else {
-        ncr.StatusNC = 'In Progress';
-      }
-      renderDashboard(rawDataNCR);
-    }
+    // Refresh data dari database
+    await loadAllData();
     
-    // Refresh data
-    await loadDashboardData();
+    // Kalau sedang di halaman follow-up, reload view
+    if (document.getElementById('followUpPage').style.display === 'block') {
+      const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+      if (ncr) {
+        loadNCRViewData(ncr);
+        assignFollowUpPIC();
+        fillD1DropdownsFromSection();
+      }
+    }
     
   } catch(err) {
     console.error(`❌ Error submitting ${step}:`, err);
     alert(`❌ Failed to submit ${step}: ${err.message}`);
   }
 }
-
 // ==========================================
 // 9. FUNGSI SUBMIT D3 - D8
 // ==========================================
@@ -4415,6 +4431,81 @@ async function handleImg(event, i) {
     }
 }  
 
+// ==========================================
+// Helper: Konversi PascalCase → camelCase berdasarkan step
+// ==========================================
+function convertToCamelCase(raw, step) {
+  const mapping = {
+    D2: {
+      'IssuedBy': 'issuedBy',
+      'ShiftTime': 'shiftTime',
+      'PartNo': 'partNo',
+      'CustomerName': 'customerName',
+      'DetectionLocation': 'detectionLocation',
+      'AffectedQty': 'affectedQty',
+      'SamplingQty': 'samplingQty',
+      'RejectQtyDeclated': 'rejectQtyDeclared',
+      'NCMode': 'ncMode',
+      'NCCatagory': 'ncCategory',
+      'DetailNC': 'detailNC',
+      'HowItDetected': 'howItDetected',
+      'InterimAction': 'interimAction',
+      'SortingRepairReworkRequired': 'sortingRepairReworkRequired',
+      'SortingReworkPIC': 'sortingReworkPIC',
+      'NCPicture': 'ncPicture'
+    },
+    D3: {
+      'InterimActBy': 'interimActBy',
+      'InterimActionDate': 'interimActionDate',
+      'InterimRemarks': 'interimRemarks',
+      'TotalOK': 'totalOK',
+      'FinalRejectQty': 'finalRejectQty',
+      'TotalManHour': 'totalManHour'
+    },
+    D4: {
+      'RootCauseOcc': 'rootCauseOcc',
+      'RootCause(Escape)': 'rootCauseEscape',
+      '5M1E-Factor': 'factor5m1e',
+      'RC-AnalysisBy': 'rcAnalysisBy',
+      'RC-AnalysisDate': 'rcAnalysisDate'
+    },
+    D5: {
+      'CorrectiveActOccur': 'correctiveActOccur',
+      'CorrectiveActSkip': 'correctiveActSkip',
+      'CABy': 'caBy',
+      'CADate': 'caDate'
+    },
+    D6: {
+      'ValidationCAOcc': 'validationCaOcc',
+      'ValidationCASkip': 'validationCaSkip',
+      'ValidateCAPABy': 'validateCapaBy',
+      'ValidateCAPADate': 'validateCapaDate',
+      'ValidationResult': 'validationResult'
+    },
+    D7: {
+      'PAOcc': 'paOcc',
+      'PASkip': 'paSkip',
+      'PABy': 'paBy',
+      'PADate': 'paDate'
+    },
+    D8: {
+      'ApprovedBy': 'approvedBy',
+      'CloseDate': 'closeDate',
+      'CongratulationMsg': 'congratulationMsg',
+      'StatusNC': 'statusNC'
+    }
+  };
+  
+  const stepMap = mapping[step];
+  if (!stepMap) return raw;
+  
+  const result = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const newKey = stepMap[key] || key;
+    result[newKey] = value;
+  }
+  return result;
+}
   
 
   
