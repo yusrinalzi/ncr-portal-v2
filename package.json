@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "hono": "^4.13.13",
+    "jose": "^6.2.12"
+  }
+}
