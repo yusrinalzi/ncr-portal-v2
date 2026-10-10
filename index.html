@@ -2054,97 +2054,105 @@ function sendNoticeEmail(picId, subjectText, bodyText) {
 }
   
 // ==========================================
-// 7. FUNGSI SUBMIT NCR (CREATE)
+// 7. FUNGSI SUBMIT NCR (CREATE) — v2 (Neon)
 // ==========================================
 async function submitD1D2(e) {
   e.preventDefault();
   
-  const idNo = document.getElementById('idNo').value;
-  
-  // 🔥 Convert foto Bad & Good ke base64 (readFileAsBase64 sudah ada di kode Anda)
+  // ⚠️ Foto untuk sementara di-skip (upload foto menyusul)
+  // Kalau mau aktifkan foto nanti, hapus komentar di bawah dan sesuaikan endpoint
   let photoBadBase64 = '';
   let photoGoodBase64 = '';
   
-  try {
-    if (window.photoBadFile) {
-      photoBadBase64 = await readFileAsBase64(window.photoBadFile);
-    }
-    if (window.photoGoodFile) {
-      photoGoodBase64 = await readFileAsBase64(window.photoGoodFile);
-    }
-  } catch(err) {
-    console.error('❌ Gagal membaca file foto:', err);
-  }
-  
-  console.log('📤 Photo Bad length:', photoBadBase64.length);
-  console.log('📤 Photo Good length:', photoGoodBase64.length);
-  
-  const formData = {
-    action: 'appendNCR',
-    timestamp: new Date().toISOString(),
-    data: {
-      'ID No.': idNo,
-      'Type': document.getElementById('ncrType').value,
-      'Category': document.getElementById('prodCategory').value,
-      'IssuedDate': new Date().toLocaleDateString('en-GB'),
-      'ShiftTime': document.getElementById('ShiftTime').value,
-      'PartNo': document.getElementById('partNo').value,
-      'CustomerName': document.getElementById('CustomerName').value,
-      'DetectionLocation': document.getElementById('location').value,
-      'AffectedQty': document.getElementById('affectedQty').value,
-      'SamplingQty': document.getElementById('smplQty').value,
-      'RejectQtyDeclated': document.getElementById('intlNcQty').value,
-      'NCMode': document.getElementById('ncMode').value,
-      'NCCatagory': document.getElementById('ncCategory').value,
-      'DetailNC': document.getElementById('DetailNC').value,
-      'HowItDetected': document.getElementById('howDetected').value,
-      'InterimAction': document.getElementById('interimAct').value,
-      'SortingRepairReworkRequired': document.getElementById('SortingRepairReworkRequired').value,
-      'SortingReworkPIC': document.getElementById('picD3').value,
-      'Period': new Date().toLocaleDateString('en-GB'),
-      'IssuedBy': document.getElementById('issuedBy').value,
-      'NCPicture': photoBadBase64,   // 🔥 foto Bad sample
-      'OKPicture': photoGoodBase64,  // 🔥 foto Good sample
-      'D1': document.getElementById('picD1').value,
-      'D2': document.getElementById('picD2').value,
-      'InterimActBy': document.getElementById('picD3').value,
-      'RC-AnalysisBy': document.getElementById('picD4').value,
-      'CABy': document.getElementById('picD5').value,
-      'ValidateCAPABy': document.getElementById('picD6').value,
-      'PABy': document.getElementById('picD7').value,
-      'ApprovedBy': document.getElementById('picD8').value,
-      'StatusNC': 'Open'
-    }
+  // Untuk sekarang, kita kirim null (upload foto belum ada endpoint-nya)
+  // try {
+  //   if (window.photoBadFile) {
+  //     photoBadBase64 = await readFileAsBase64(window.photoBadFile);
+  //   }
+  //   if (window.photoGoodFile) {
+  //     photoGoodBase64 = await readFileAsBase64(window.photoGoodFile);
+  //   }
+  // } catch(err) {
+  //   console.error('❌ Gagal membaca file foto:', err);
+  // }
+
+  // 🔥 Body untuk endpoint /ncr (format flat, bukan nested)
+  const body = {
+    type: document.getElementById('ncrType').value,
+    category: document.getElementById('prodCategory').value,
+    issuedBy: document.getElementById('issuedBy').value,
+    issuedDate: new Date().toISOString().split('T')[0],
+    shiftTime: document.getElementById('ShiftTime').value,
+    customerName: document.getElementById('CustomerName').value,
+    partNo: document.getElementById('partNo').value,
+    affectedQty: document.getElementById('affectedQty').value,
+    samplingQty: document.getElementById('smplQty').value,
+    rejectQtyDeclared: document.getElementById('intlNcQty').value,
+    detectionLocation: document.getElementById('location').value,
+    detailNC: document.getElementById('DetailNC').value,
+    howItDetected: document.getElementById('howDetected').value,
+    interimAction: document.getElementById('interimAct').value,
+    sortingRepairReworkRequired: document.getElementById('SortingRepairReworkRequired').value,
+    sortingReworkPIC: document.getElementById('picD3').value,
+    ncCategory: document.getElementById('ncCategory').value,
+    ncMode: document.getElementById('ncMode').value,
+    statusNC: 'Open',
+    
+    // Foto: untuk sementara null (upload foto menyusul)
+    ncPicture: null,
+    okPicture: null,
+    
+    // PIC assignment (D1-D8)
+    interimActBy: document.getElementById('picD3').value,
+    rcAnalysisBy: document.getElementById('picD4').value,
+    caBy: document.getElementById('picD5').value,
+    validateCapaBy: document.getElementById('picD6').value,
+    paBy: document.getElementById('picD7').value,
+    approvedBy: document.getElementById('picD8').value
   };
 
- try {
-  showLoadingOverlay('Saving NCR...');
-  
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(formData)
-  });
-  
-  const result = await response.json();
-  console.log('📤 Server response:', result);
-  
-  hideLoadingOverlay();
-  
-  if (result.status === 'ok') {
-    resetPhotoUpload();
-    alert('✅ NCR Submitted Successfully!');
-    showDashboard();
-    loadAllData();
-  } else {
-    alert('❌ Gagal menyimpan: ' + (result.message || 'Unknown error'));
+  try {
+    showLoadingOverlay('Saving NCR...');
+    
+    // 🔥 Ambil token dari localStorage
+    const token = localStorage.getItem('authToken');
+    
+    if (!token) {
+      hideLoadingOverlay();
+      alert('⚠️ Sesi login habis. Silakan login ulang.');
+      doLogout();
+      return;
+    }
+    
+    // 🔥 POST ke Neon Function
+    const response = await fetch(`${API_URL}/ncr`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    });
+    
+    const result = await response.json();
+    console.log('📤 Server response:', result);
+    
+    hideLoadingOverlay();
+    
+    if (result.status === 'ok') {
+      resetPhotoUpload();
+      alert(`✅ NCR Submitted Successfully!\n\nID No: ${result.idNo}`);
+      showDashboard();
+      loadAllData();
+    } else {
+      alert('❌ Gagal menyimpan: ' + (result.message || 'Unknown error'));
+    }
+    
+  } catch(err) {
+    hideLoadingOverlay();
+    console.error("❌ Submission error:", err);
+    alert("❌ Submission failed: " + err.message);
   }
-  
-} catch(err) {
-  hideLoadingOverlay();
-  console.error("❌ Submission error:", err);
-  alert("❌ Submission failed: " + err.message);
-}
 }
   
 // ============================================================
