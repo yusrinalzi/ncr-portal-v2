@@ -2056,27 +2056,16 @@ function sendNoticeEmail(picId, subjectText, bodyText) {
 // ==========================================
 // 7. FUNGSI SUBMIT NCR (CREATE) — v2 (Neon)
 // ==========================================
+// ==========================================
+// 7. FUNGSI SUBMIT NCR (CREATE) — v3 (dengan upload foto 2-step)
+// ==========================================
 async function submitD1D2(e) {
   e.preventDefault();
   
-  // ⚠️ Foto untuk sementara di-skip (upload foto menyusul)
-  // Kalau mau aktifkan foto nanti, hapus komentar di bawah dan sesuaikan endpoint
-  let photoBadBase64 = '';
-  let photoGoodBase64 = '';
-  
-  // Untuk sekarang, kita kirim null (upload foto belum ada endpoint-nya)
-  // try {
-  //   if (window.photoBadFile) {
-  //     photoBadBase64 = await readFileAsBase64(window.photoBadFile);
-  //   }
-  //   if (window.photoGoodFile) {
-  //     photoGoodBase64 = await readFileAsBase64(window.photoGoodFile);
-  //   }
-  // } catch(err) {
-  //   console.error('❌ Gagal membaca file foto:', err);
-  // }
+  // ⚠️ Foto diambil TAPI belum diupload (nunggu idNo dari backend)
+  const photoBadFile = window.photoBadFile || null;
+  const photoGoodFile = window.photoGoodFile || null;
 
-  // 🔥 Body untuk endpoint /ncr (format flat, bukan nested)
   const body = {
     type: document.getElementById('ncrType').value,
     category: document.getElementById('prodCategory').value,
@@ -2098,11 +2087,10 @@ async function submitD1D2(e) {
     ncMode: document.getElementById('ncMode').value,
     statusNC: 'Open',
     
-    // Foto: untuk sementara null (upload foto menyusul)
+    // Foto akan diupdate setelah upload
     ncPicture: null,
     okPicture: null,
     
-    // PIC assignment (D1-D8)
     interimActBy: document.getElementById('picD3').value,
     rcAnalysisBy: document.getElementById('picD4').value,
     caBy: document.getElementById('picD5').value,
@@ -2112,11 +2100,12 @@ async function submitD1D2(e) {
   };
 
   try {
+    // ==========================================
+    // STEP 1: Submit NCR ke database (tanpa foto)
+    // ==========================================
     showLoadingOverlay('Saving NCR...');
     
-    // 🔥 Ambil token dari localStorage
     const token = localStorage.getItem('authToken');
-    
     if (!token) {
       hideLoadingOverlay();
       alert('⚠️ Sesi login habis. Silakan login ulang.');
@@ -2124,7 +2113,6 @@ async function submitD1D2(e) {
       return;
     }
     
-    // 🔥 POST ke Neon Function
     const response = await fetch(`${API_URL}/ncr`, {
       method: 'POST',
       headers: {
@@ -2135,18 +2123,79 @@ async function submitD1D2(e) {
     });
     
     const result = await response.json();
-    console.log('📤 Server response:', result);
+    
+    if (result.status !== 'ok') {
+      hideLoadingOverlay();
+      alert('❌ Gagal menyimpan: ' + (result.message || 'Unknown error'));
+      return;
+    }
+    
+    const idNo = result.idNo;
+    console.log('✅ NCR created:', idNo);
+    
+    // ==========================================
+    // STEP 2: Upload foto (kalau ada)
+    // ==========================================
+    let ncPictureUrl = null;
+    let okPictureUrl = null;
+    
+    if (photoBadFile) {
+      try {
+        showLoadingOverlay('Uploading bad sample...');
+        ncPictureUrl = await uploadPhotoToStorage(photoBadFile, idNo, 'nc');
+        console.log('✅ Bad photo uploaded:', ncPictureUrl);
+      } catch(err) {
+        console.error('❌ Upload bad photo gagal:', err);
+      }
+    }
+    
+    if (photoGoodFile) {
+      try {
+        showLoadingOverlay('Uploading good sample...');
+        okPictureUrl = await uploadPhotoToStorage(photoGoodFile, idNo, 'ok');
+        console.log('✅ Good photo uploaded:', okPictureUrl);
+      } catch(err) {
+        console.error('❌ Upload good photo gagal:', err);
+      }
+    }
+    
+    // ==========================================
+    // STEP 3: Update NCR dengan URL foto (kalau ada)
+    // ==========================================
+    if (ncPictureUrl || okPictureUrl) {
+      showLoadingOverlay('Updating NCR with photos...');
+      
+      const patchBody = {
+        step: 'D2',
+        data: {}
+      };
+      if (ncPictureUrl) patchBody.data.ncPicture = ncPictureUrl;
+      if (okPictureUrl) patchBody.data.okPicture = okPictureUrl;
+      
+      const patchRes = await fetch(`${API_URL}/ncr/${idNo}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(patchBody)
+      });
+      
+      const patchResult = await patchRes.json();
+      if (patchResult.status !== 'ok') {
+        console.warn('⚠️ Update foto gagal:', patchResult.message);
+      }
+    }
     
     hideLoadingOverlay();
     
-    if (result.status === 'ok') {
-      resetPhotoUpload();
-      alert(`✅ NCR Submitted Successfully!\n\nID No: ${result.idNo}`);
-      showDashboard();
-      loadAllData();
-    } else {
-      alert('❌ Gagal menyimpan: ' + (result.message || 'Unknown error'));
-    }
+    // ==========================================
+    // STEP 4: Selesai
+    // ==========================================
+    resetPhotoUpload();
+    alert(`✅ NCR Submitted Successfully!\n\nID No: ${idNo}`);
+    showDashboard();
+    loadAllData();
     
   } catch(err) {
     hideLoadingOverlay();
@@ -4270,6 +4319,52 @@ function processPhotoFromCameraFu(imageData) {
 
 
 // ==========================================
+// Upload foto ke Neon Object Storage
+// ==========================================
+async function uploadPhotoToStorage(file, idNo, kind) {
+  // kind: 'nc' (bad sample) atau 'ok' (good sample)
+  const token = localStorage.getItem('authToken');
+  
+  if (!token) throw new Error('Sesi login habis');
+  
+  // Step 1: Minta presigned URL
+  const presignRes = await fetch(`${API_URL}/upload/presign`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: file.type || 'image/jpeg',
+      idNo: idNo,
+      kind: kind
+    })
+  });
+  
+  const presignData = await presignRes.json();
+  
+  if (presignData.status !== 'ok') {
+    throw new Error('Gagal dapat presign: ' + (presignData.message || 'Unknown'));
+  }
+  
+  // Step 2: Upload file ke presigned URL
+  const uploadRes = await fetch(presignData.uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type || 'image/jpeg'
+    },
+    body: file
+  });
+  
+  if (!uploadRes.ok) {
+    throw new Error(`Upload gagal: HTTP ${uploadRes.status}`);
+  }
+  
+  // Step 3: Kembalikan URL publik
+  return presignData.publicUrl;
+}
+// ==========================================
 // FUNGSI UPLOAD KE GITHUB
 // ==========================================
 
@@ -4507,6 +4602,55 @@ function convertToCamelCase(raw, step) {
     result[newKey] = value;
   }
   return result;
+}
+
+// ==========================================
+// Fungsi baru: Upload foto ke Neon Object Storage
+// ==========================================
+async function uploadPhotoToStorage(file, idNo, kind) {
+  // kind: 'nc' (bad sample) atau 'ok' (good sample)
+  const token = localStorage.getItem('authToken');
+  
+  if (!token) {
+    throw new Error('Sesi login habis');
+  }
+  
+  // Step 1: Minta presigned URL
+  const presignRes = await fetch(`${API_URL}/upload/presign`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      filename: file.name,
+      contentType: file.type || 'image/jpeg',
+      idNo: idNo,
+      kind: kind
+    })
+  });
+  
+  const presignData = await presignRes.json();
+  
+  if (presignData.status !== 'ok') {
+    throw new Error('Gagal dapat presign: ' + (presignData.message || 'Unknown'));
+  }
+  
+  // Step 2: Upload langsung ke storage
+  const uploadRes = await fetch(presignData.uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': file.type || 'image/jpeg'
+    },
+    body: file
+  });
+  
+  if (!uploadRes.ok) {
+    throw new Error(`Upload gagal: HTTP ${uploadRes.status}`);
+  }
+  
+  // Step 3: Kembalikan URL publik
+  return presignData.publicUrl;
 }
   
 
