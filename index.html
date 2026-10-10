@@ -1,0 +1,4406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Internal Non-Conformity Report (8D)</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <style>
+    :root {
+      --primary: #02453c;
+      --primary-light: #035a4e;
+      --primary-dark: #012e28;
+      --accent: #04a086;
+      --bg: #f0f5f4;
+      --text: #1a2e2b;
+      --shadow: 0 2px 12px rgba(2,69,60,0.10);
+      --shadow-lg: 0 8px 32px rgba(2,69,60,0.18);
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    
+    /* ========== LOGIN PAGE ========== */
+    .page { display: none; min-height: 100vh; }
+    .page.active { display: flex; flex-direction: column; }
+    
+    #loginPage { 
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--accent) 100%); 
+      justify-content: center; 
+      align-items: center; 
+      padding: 20px; 
+    }
+    
+    .login-card { 
+      background: white; 
+      border-radius: 20px; 
+      padding: 48px 40px; 
+      max-width: 420px; 
+      width: 100%; 
+      box-shadow: var(--shadow-lg); 
+    }
+    
+    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-logo h1 { font-size: 26px; font-weight: 700; color: var(--primary); }
+    .login-logo p { color: #5a7570; font-size: 13px; margin-top: 4px; }
+    
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--primary); margin-bottom: 6px; }
+    .form-group input { width: 100%; padding: 12px 16px; border: 2px solid #c0d8d4; border-radius: 10px; }
+    .btn-login { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: 600; }
+    .guest-link { text-align: center; margin-top: 18px; }
+    .guest-link a { color: var(--accent); text-decoration: none; }
+    .login-error { color: #c0392b; font-size: 13px; text-align: center; margin-top: 10px; display: none; }
+    
+    /* ========== MAIN APP ========== */
+    #appShell { display: none; }
+    #appShell.active { display: flex; flex-direction: column; }
+    
+    /* Navbar */
+    .navbar { background: var(--primary); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
+    .navbar-brand { color: white; font-size: 18px; font-weight: 700; }
+    .navbar-nav { display: flex; flex-direction: row; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .nav-user { display: flex; align-items: center; gap: 12px; color: white; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .btn-logout { background: none; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; padding: 5px 12px; color: white; cursor: pointer; }
+    .btn-logout:hover { background: rgba(255,255,255,0.15); }
+    
+    /* Content Pages */
+    .page-content { display: none; flex: 1; padding: 28px 32px; max-width: 1400px; width: 100%; margin: 0 auto; }
+    #sectionDashboard { display: block; }
+    
+    /* KPI Cards */
+    .kpi-card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; padding: 15px; font-weight: bold; color: white; cursor: pointer; transition: transform 0.2s; }
+    .kpi-card:hover { transform: translateY(-3px); }
+    
+    /* Form */
+    .input-green { background-color: #ccffcc !important; }
+    .btn-custom { background-color: #1a237e; color: white; font-weight: bold; }
+    .btn-custom:hover { background-color: #0d1b60; color: white; }
+    .img-placeholder { width: 100%; height: 180px; background-color: #e0e0e0; display: flex; align-items: center; justify-content: center; border-radius: 5px; }
+    
+    /* Loading */
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 10000; }
+    .loading-spinner { background: white; padding: 24px 32px; border-radius: 16px; text-align: center; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #e4eeed; border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Fix untuk input readonly */
+    input[readonly] {
+      background-color: #e8f0fe !important;
+      color: #1a2e2b !important;
+      border: 1px solid #c0d8d4 !important;
+    }
+
+    #issuedBy {
+      background-color: #e8f0fe !important;
+      color: #1a2e2b !important;
+      font-weight: 500;
+    }
+
+    /* Follow-up Page Styles */
+    .followup-section {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 30px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--primary);
+    }
+
+    .followup-section h5 {
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .followup-section h5 .badge-d {
+      background: var(--primary);
+      color: white;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 14px;
+    }
+
+    .followup-section .form-label {
+      font-weight: 600;
+      font-size: 13px;
+      color: #2c3e50;
+    }
+
+    .followup-section .form-control, 
+    .followup-section .form-select {
+      border: 1px solid #dce4e3;
+    }
+
+    .followup-section .form-control:focus,
+    .followup-section .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.2rem rgba(2,69,60,0.15);
+    }
+
+    .highlight-area {
+      background-color: #fff9c4;
+      border: 2px dashed #f9a825;
+      padding: 12px;
+      border-radius: 8px;
+      min-height: 60px;
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 2px dashed #dce4e3;
+      margin: 30px 0;
+    }
+
+    .btn-submit-d {
+      background: var(--primary);
+      color: white;
+      padding: 8px 30px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-submit-d:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .btn-submit-d:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-open { background: #ffcdd2; color: #c62828; }
+    .status-progress { background: #fff3e0; color: #e65100; }
+    .status-done { background: #c8e6c9; color: #2e7d32; }
+
+    .nav-link-custom {
+      color: white !important;
+      opacity: 0.7;
+      transition: all 0.2s;
+    }
+
+    .nav-link-custom:hover {
+      opacity: 1;
+    }
+
+    .nav-link-custom.active {
+      opacity: 1;
+      background: rgba(255,255,255,0.15);
+      border-radius: 6px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .page-content { padding: 16px; }
+      .navbar-nav .btn { font-size: 12px; padding: 4px 8px; }
+      .followup-section { padding: 16px; }
+    }
+
+    
+/* ========== SPINNER INLINE ========== */
+.spinner-container {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.spinner-container.active {
+  display: inline-flex;
+}
+
+.btn-ing {
+  opacity: 0.7;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.btn-submit-d:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ========== FULL PAGE ING OVERLAY ========== */
+.spinner-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99999;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+
+.spinner-overlay.active {
+  display: flex;
+}
+
+.spinner-overlay .spinner-box {
+  background: white;
+  padding: 40px 50px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 8px 48px rgba(0, 0, 0, 0.3);
+  min-width: 200px;
+}
+
+.spinner-overlay .spinner-box .spinner-big {
+  width: 56px;
+  height: 56px;
+  border: 5px solid #e4eeed;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px auto;
+}
+
+.spinner-overlay .spinner-box p {
+  margin: 0;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Foto di Follow-up */
+#fuPhotoDisplay {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  border:5px solid #dc3545;
+  object-fit: contain;
+}
+
+.img-placeholder {
+  width: 100%;
+  height: 200px;
+  background: #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #999;
+}    
+
+/* Foto di Follow-up */
+#fuPhotoDisplay {
+  max-width: 100%;
+  max-height: 350px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  object-fit: contain;
+  background: #fafafa;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.img-placeholder {
+  width: 100%;
+  height: 200px;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #adb5bd;
+  border: 2px dashed #dee2e6;
+  transition: all 0.3s ease;
+}
+
+.img-placeholder i {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+/* Preview foto di Create NCR */
+#photoPreview {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  padding: 4px;
+  background: white;
+  object-fit: contain;
+}
+
+#fuPhotoPreview {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  padding: 4px;
+  background: white;
+  object-fit: contain;
+}    
+    
+  </style>
+</head>
+<body>
+
+<!-- ========== LOGIN PAGE ========== -->
+<div id="loginPage" class="page active">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>⚙️ Internal Nonconformity<br>Management System</h1>
+      <p>NCMR, PDR & 8D</p>
+    </div>
+    <div class="form-group">
+      <label>User Name</label>
+      <input type="text" id="loginName" placeholder="Enter your name" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>ID Number</label>
+      <input type="password" id="loginId" placeholder="Enter your ID number" autocomplete="off">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="loginError">Name / ID does not match. Please try again.</div>
+    <div class="guest-link">
+      <a href="#" onclick="doGuestLogin()">👤 Continue as Guest (View Only)</a>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MAIN APP ========== -->
+<!-- ========== LOADING OVERLAY (FULL PAGE) ========== -->
+<div id="loadingOverlay" class="spinner-overlay">
+  <div class="spinner-box">
+    <div class="spinner-big"></div>
+    <p id="loadingMessage">Processing...</p>
+  </div>
+</div>
+<!-- ========== CAMERA MODAL ========== -->
+<div id="cameraModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:99999; justify-content:center; align-items:center; flex-direction:column; backdrop-filter:blur(4px);">
+  <div style="background:white; border-radius:16px; padding:24px; max-width:600px; width:95%; text-align:center; box-shadow:0 8px 48px rgba(0,0,0,0.4);">
+    <h5 class="mb-3">📷 Ambil Foto</h5>
+    <div style="position:relative; background:#000; border-radius:8px; overflow:hidden; min-height:300px; display:flex; align-items:center; justify-content:center;">
+      <video id="cameraVideo" autoplay playsinline style="width:100%; max-height:400px; background:#000; display:block; object-fit:contain;"></video>
+      <canvas id="cameraCanvas" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;"></canvas>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+      <button class="btn btn-danger" onclick="closeCamera()"><i class="fas fa-times"></i> Tutup</button>
+      <button class="btn btn-primary" onclick="capturePhoto()" id="btnCapture"><i class="fas fa-camera"></i> Ambil Foto</button>
+      <button class="btn btn-success" onclick="confirmPhoto()" id="btnConfirm" style="display:none;"><i class="fas fa-check"></i> Gunakan Foto</button>
+      <button class="btn btn-secondary" onclick="retakePhoto()" id="btnRetake" style="display:none;"><i class="fas fa-redo"></i> Ulangi</button>
+    </div>
+    <small class="text-muted d-block mt-2">Pastikan izin kamera diizinkan di browser Anda.</small>
+  </div>
+</div>
+
+<!-- ========== CAMERA MODAL FOR FOLLOW-UP ========== -->
+<div id="cameraModalFu" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:99999; justify-content:center; align-items:center; flex-direction:column; backdrop-filter:blur(4px);">
+  <div style="background:white; border-radius:16px; padding:24px; max-width:600px; width:95%; text-align:center; box-shadow:0 8px 48px rgba(0,0,0,0.4);">
+    <h5 class="mb-3">📷 Ambil Foto (Follow-up)</h5>
+    <div style="position:relative; background:#000; border-radius:8px; overflow:hidden; min-height:300px; display:flex; align-items:center; justify-content:center;">
+      <video id="cameraVideoFu" autoplay playsinline style="width:100%; max-height:400px; background:#000; display:block; object-fit:contain;"></video>
+      <canvas id="cameraCanvasFu" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;"></canvas>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+      <button class="btn btn-danger" onclick="closeCameraFu()"><i class="fas fa-times"></i> Tutup</button>
+      <button class="btn btn-primary" onclick="capturePhotoFu()" id="btnCaptureFu"><i class="fas fa-camera"></i> Ambil Foto</button>
+      <button class="btn btn-success" onclick="confirmPhotoFu()" id="btnConfirmFu" style="display:none;"><i class="fas fa-check"></i> Gunakan Foto</button>
+      <button class="btn btn-secondary" onclick="retakePhotoFu()" id="btnRetakeFu" style="display:none;"><i class="fas fa-redo"></i> Ulangi</button>
+    </div>
+    <small class="text-muted d-block mt-2">Pastikan izin kamera diizinkan di browser Anda.</small>
+  </div>
+</div>
+
+  
+<div id="appShell" class="page">
+  
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-brand">⚙️ Internal NC Report System</div>
+    <div class="navbar-nav">
+      <button class="btn btn-sm btn-outline-light nav-link-custom" onclick="showDashboard()">
+        <i class="fas fa-chart-bar"></i> Dashboard
+      </button>
+      <button class="btn btn-sm btn-warning text-dark fw-bold" onclick="openCreateForm()">
+        <i class="fas fa-plus"></i> Create NCR
+      </button>
+      <button class="btn btn-sm btn-info text-white nav-link-custom" onclick="openFollowUp()">
+        <i class="fas fa-clipboard-list"></i> Follow-up NC
+      </button>
+    </div>
+    <div class="nav-user">
+      <div class="avatar" id="navAvatar">G</div>
+      <span id="navUserName">Guest</span>
+      <button class="btn-logout" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </nav>
+
+  <!-- ========== DASHBOARD PAGE ========== -->
+  <div id="sectionDashboard" class="page-content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3>📊 Dashboard Overview 
+      <span id="syncSpinner" class="spinner-border spinner-border-sm text-secondary ms-2" style="display:none;" role="status"></span>
+      </h3>
+      <button class="btn btn-sm btn-secondary" onclick="loadAllData()"><i class="fas fa-sync"></i> Refresh</button>
+    </div>
+
+    <!-- Filter -->
+    <div class="row mb-4 align-items-center">
+      <div class="col-auto"><h6 class="text-muted mb-0 fw-bold">Filter by product category:</h6></div>
+      <div class="col">
+        <button class="btn btn-sm btn-secondary px-3" onclick="filterDashboard('All')">All</button>
+        <button class="btn btn-sm btn-primary px-3 me-1" onclick="filterDashboard('EV')">EV</button>
+        <button class="btn btn-sm btn-info text-white px-3 me-1" onclick="filterDashboard('PWC')">PWC</button>
+        <button class="btn btn-sm btn-success px-3 me-1" onclick="filterDashboard('ICA')">ICA</button>
+        <button class="btn btn-sm btn-dark px-3 me-1" onclick="filterDashboard('Cable-PVC')">Cable-PVC</button>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-3"><div class="kpi-card" style="background-color: #e57373;"><h3 id="kpi-total">0</h3>TOTAL NC</div></div>
+      <div class="col-md-3"><div class="kpi-card" style="background-color: #4fc3f7;"><h3 id="kpi-pdr">0</h3>Total PDR</div></div>
+      <div class="col-md-3"><div class="kpi-card" style="background-color: #81c784;"><h3 id="kpi-ncmr">0</h3>Total NCMR</div></div>
+      <div class="col-md-3"><div class="kpi-card" style="background-color: #ba68c8;"><h3 id="kpi-8d">0</h3>Total 8D</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4 g-3">
+      <div class="col-md-8">
+        <div class="card p-3 shadow-sm border-0">
+          <div class="fw-bold mb-1" style="font-size:14px;">NCR Trend by Month</div>
+          <div style="display:flex; gap:14px; margin-bottom:10px;">
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;">
+              <span style="width:10px;height:10px;border-radius:2px;background:#378ADD;display:inline-block;"></span>PDR
+            </span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;">
+              <span style="width:10px;height:10px;border-radius:2px;background:#639922;display:inline-block;"></span>NCMR
+            </span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;">
+              <span style="width:10px;height:10px;border-radius:2px;background:#7F77DD;display:inline-block;"></span>8D
+            </span>
+          </div>
+          <div style="position:relative; width:100%; height:240px;">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card p-3 shadow-sm border-0">
+          <div class="fw-bold mb-1" style="font-size:14px;">Top NC Categories (Pareto)</div>
+          <div style="display:flex; gap:14px; margin-bottom:10px;">
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;">
+              <span style="width:10px;height:10px;border-radius:2px;background:#EF9F27;display:inline-block;"></span>Frekuensi
+            </span>
+            <span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#666;">
+              <span style="width:10px;height:3px;border-top:2px dashed #A32D2D;display:inline-block;"></span>&nbsp;Kumulatif %
+            </span>
+          </div>
+          <div style="position:relative; width:100%; height:240px;">
+            <canvas id="paretoChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card p-3 shadow-sm border-0">
+      <h5 class="fw-bold text-dark mb-3">Active NCR List (Click row to follow-up 8D report)</h5>
+      <div class="table-responsive">
+        <table class="table table-hover border align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>ID No.</th>
+              <th>Category</th>
+              <th>Issued By</th>
+              <th>DetailNC</th>
+              <th>CustomerName</th>
+              <th>Issued Date</th>
+              <th>Status/PIC</th>
+              <th>Followup</th>
+              
+            </tr>
+          </thead>
+          <tbody id="ncrTableBody">
+            <tr><td colspan="8" class="text-center py-4">Loading database from Google Sheet...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CREATE NCR FORM ========== -->
+  <div id="ncrFormPage" class="page-content">
+    <div class="card shadow mx-auto" style="max-width: 900px;">
+      <div class="card-header" style="background: var(--primary); color: white;">
+        <h4 class="mb-0">📝 NON-CONFORMITY REPORT</h4>
+      </div>
+      <div class="card-body">
+        <form id="formD1D2" onsubmit="submitD1D2(event)">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">NCR Type</label>
+              <select id="ncrType" class="form-select input-green"  onchange="generateIDNo()"  required>
+                <option value="PDR">PDR</option>
+                <option value="NCMR">NCMR</option>
+                <option value="8D">8D</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Product Category</label>
+              <select id="prodCategory" class="form-select input-green" required>
+                <option value="PWC">PWC</option>
+                <option value="ICA">ICA</option>
+                <option value="EV">EV</option>
+                <option value="Cable-PVC">Cable-PVC</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Issued By</label>
+              <input type="text" id="issuedBy" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">ID No. (Auto)</label>
+              <input type="text" id="idNo" class="form-control" readonly>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Part No / Name</label>
+              <input type="text" id="partNo" class="form-control input-green" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Shift/Time</label>
+              <input type="text" id="ShiftTime" class="form-control input-green" required>
+            </div>
+             <div class="col-md-6">
+              <label class="form-label fw-bold">Customer Name</label>
+              <input type="text" id="CustomerName" class="form-control input-green" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Location / Area</label>
+              <input type="text" id="location" class="form-control input-green" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Affected Qty</label>
+              <input type="number" id="affectedQty" class="form-control input-green" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Sample Qty</label>
+              <input type="number" id="smplQty" class="form-control input-green" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">NC Qty</label>
+              <input type="number" id="intlNcQty" class="form-control input-green" required>
+            </div>
+             <div class="col-md-6">
+              <label class="form-label fw-bold">NC Mode</label>
+              <select id="ncMode" class="form-select input-green" required>
+                <option value="Appearance issue">Appearance issue</option>
+                <option value="Component damage">Component damage</option>
+                <option value="Dimension Out of Spec.">Dimension Out of Spec.</option>
+                <option value="Hipot Test fail">Hipot Test fail</option>  
+                <option value="Improper follow-up">Improper follow-up</option>
+                <option value="Mis-out spec. reference">Mis-out spec. reference</option>
+                <option value="Missing component">Missing component</option>
+                <option value="Missing document">Missing document</option>
+                <option value="Mix material">Mix material</option>
+                <option value="Molding defect">Molding defect</option>
+                <option value="Not Follow WI/Procedure/Standard">Not Follow WI/Procedure/Standard</option>
+                <option value="Not Proper Assembly">Not Proper Assembly</option>
+                <option value="Packaging dimension Out of Spec.">Packaging dimension Out of Spec.</option>
+                <option value="Packaging issue">Packaging issue</option>
+                <option value="Part drop">Part drop</option>
+                <option value="Reject cable">Reject cable</option>
+                <option value="Reject Component">Reject component </option>
+                <option value="Reject testing">Reject testing</option>
+                <option value="Safety issue">Safety issue</option>
+                <option value="Skip maintenance ">Skip maintenance </option>
+                <option value="Skip Process">Skip Process</option>
+                <option value="Trend data not meet criteria">Trend data not meet criteria</option>         
+                <option value="Wrong assembly">Wrong assembly</option>
+                <option value="Wrong issue raw material PN">Wrong issue raw material PN</option>
+                <option value="Wrong Quantity">Wrong Quantity</option>    
+                <option value="Wrong setting parameter">Wrong setting parameter</option>
+                <option value="Wrong traceability">Wrong traceability</option>
+                <option value="Others">Others</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">NC Category</label>
+              <select id="ncCategory" class="form-select input-green" required>
+                  <option value="Product varibale/Data">Product varibale/Data </option>
+                  <option value="Product attribut/Appearance issue">Product attribut/appearance/Function</option>
+                  <option value="Machine/Equipment Failure">Machine/Equipment issue</option>
+                  <option value="Wrong Material">Material issue</option>
+                  <option value="Method Failure">Method issue</option>
+                  <option value="Personal Failure/Disiplinary & Handling issue">Personal Failure/Disiplinary & Handling issue</option>
+                  <option value="Measurement Failure">Measurement issue</option>
+                  <option value="Environment Failure">Environmental issue</option>
+                  <option value="Others">Others</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">Details NC</label>
+              <textarea id="DetailNC" class="form-control input-green" rows="2" required></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">How it detected?</label>
+              <textarea id="howDetected" class="form-control input-green" rows="2" required></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">Interim Act / Containment Action</label>
+              <textarea id="interimAct" class="form-control input-green" rows="2" required></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Is sorting, repair or rework required?</label>
+              <select id="SortingRepairReworkRequired" class="form-select input-green" required>
+                <option value="-Please Select yes or no-">Please Select yes or no</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+
+            <!-- Upload Foto -->
+<!-- ✅ HANYA SATU BAGIAN UPLOAD FOTO -->
+<!-- 📷 Upload / Ambil Foto Non-Conformity — Bad & Good sample -->
+<div class="col-12">
+  <label class="form-label fw-bold">📷 Upload / Ambil Foto Non-Conformity (Bad & Good sample)</label>
+  <div class="row g-3">
+    <div class="col-sm-6">
+      <label class="form-label">Bad Sample (NG)</label>
+      <div class="d-flex gap-2">
+        <input type="file" id="photoUploadBad" name="photoBad" accept="image/*" class="form-control" onchange="previewPhoto(event,'bad')" style="flex:1; min-width:150px;">
+        <button type="button" class="btn btn-primary" onclick="openCamera('bad')" style="white-space:nowrap;">
+          <i class="fas fa-camera"></i> Ambil Foto
+        </button>
+      </div>
+      <div id="photoPreviewBadContainer" class="mt-2" style="display:none;">
+        <img id="photoPreviewBad" src="#" alt="Preview Bad" style="max-width:200px; max-height:200px; border-radius:8px; border:5px solid #dc3545; padding:4px; background:white;">
+        <button type="button" class="btn btn-sm btn-danger ms-2" onclick="removePhoto('bad')">✕ Hapus</button>
+        <small class="text-muted d-block mt-1">Format: JPG, PNG (Max 5MB)</small>
+      </div>
+    </div>
+
+    <div class="col-sm-6">
+      <label class="form-label">Good Sample (OK)</label>
+      <div class="d-flex gap-2">
+        <input type="file" id="photoUploadGood" name="photoGood" accept="image/*" class="form-control" onchange="previewPhoto(event,'good')" style="flex:1; min-width:150px;">
+        <button type="button" class="btn btn-primary" onclick="openCamera('good')" style="white-space:nowrap;">
+          <i class="fas fa-camera"></i> Ambil Foto
+        </button>
+      </div>
+      <div id="photoPreviewGoodContainer" class="mt-2" style="display:none;">
+        <img id="photoPreviewGood" src="#" alt="Preview Good" style="max-width:200px; max-height:200px; border-radius:8px; border:5px solid #198754; padding:4px; background:white;">
+        <button type="button" class="btn btn-sm btn-danger ms-2" onclick="removePhoto('good')">✕ Hapus</button>
+        <small class="text-muted d-block mt-1">Format: JPG, PNG (Max 5MB)</small>
+      </div>
+    </div>
+  </div>
+</div>
+            
+         <!-- D1-D8 TEAM PIC CONFIGURATION -->
+<div class="col-12 mt-4 border-top pt-3">
+  <h6 class="fw-bold text-dark mb-3">🎯 Define Team Assignment (D1 - D8 PIC)</h6>
+  
+  <!-- INFO USER LOGIN - BARU -->
+  <div id="userPICInfo" class="alert alert-info py-1 mb-2 small" style="display:none;">
+    👤 Login as: <strong id="loggedInUsernameDisplay">-</strong>
+    → Responsible as  <strong id="userPICRole">-</strong>
+  </div>
+
+  <div class="row g-2 text-center row-cols-2 row-cols-sm-4 row-cols-md-8">
+    <!-- D1 - BARU (otomatis dari user login) -->
+    <div class="col">
+      <label class="small fw-bold">D1</label>
+      <input type="text" id="picD1" class="form-control form-control-sm" readonly>
+    </div>
+    
+    <!-- D2 - BARU (otomatis dari user login) -->
+    <div class="col">
+      <label class="small fw-bold">D2</label>
+      <input type="text" id="picD2" class="form-control form-control-sm" readonly>
+    </div>
+    
+    <!-- D3-D8 tetap sama (pake select dropdown) -->
+    <div class="col">
+      <label class="small fw-bold">D3 (Interim)</label>
+      <select id="picD3" class="form-select form-select-sm auditor-list"></select>
+    </div>
+    <div class="col">
+      <label class="small fw-bold">D4 (RootC)</label>
+      <select id="picD4" class="form-select form-select-sm auditor-list"></select>
+    </div>
+    <div class="col">
+      <label class="small fw-bold">D5 (CA)</label>
+      <select id="picD5" class="form-select form-select-sm auditor-list"></select>
+    </div>
+    <div class="col">
+      <label class="small fw-bold">D6 (Valid)</label>
+      <select id="picD6" class="form-select form-select-sm auditor-list"></select>
+    </div>
+    <div class="col">
+      <label class="small fw-bold">D7 (PA)</label>
+      <select id="picD7" class="form-select form-select-sm auditor-list"></select>
+    </div>
+    <div class="col">
+      <label class="small fw-bold">D8 (Approve)</label>
+      <select id="picD8" class="form-select form-select-sm auditor-list"></select>
+    </div>
+  </div>
+</div>
+            <div class="col-12 text-center mt-4">
+              <button type="button" class="btn btn-secondary px-4 me-2" onclick="showDashboard()">Cancel</button>
+              <button type="submit" class="btn btn-custom px-4"><i class="fas fa-paper-plane"></i> Submit Report</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  
+<!-- ========== FOLLOW-UP PAGE ========== -->
+<div id="followUpPage" class="page-content">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3><i class="fas fa-clipboard-list text-primary"></i> Follow-up NC Report</h3>
+    <button class="btn btn-secondary btn-sm" onclick="showDashboard()">
+      <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </button>
+  </div>
+
+  <!-- Info NCR yang sedang di-follow-up -->
+  <div class="alert alert-info">
+    <div class="row">
+      <div class="col-md-3"><strong>ID No:</strong> <span id="followUpId">-</span></div>
+      <div class="col-md-3"><strong>Type:</strong> <span id="followUpType">-</span></div>
+      <div class="col-md-3"><strong>Category:</strong> <span id="followUpCategory">-</span></div>
+      <div class="col-md-3"><strong>Status:</strong> <span id="followUpStatus" class="badge status-open">Open</span></div>
+      <div class="col-12" style="padding-top: 15px;">
+      <button class="btn-submit-d" onclick="sendEmailtoAll()"><i class="fas fa-send"></i> Submit report</button>
+    </div>    
+    </div>
+  </div>
+
+  <!-- ===== D1: Define Team Assignment (Sama seperti Create NCR) ===== -->
+  <div class="followup-section" style="border-left-color: var(--primary);">
+    <h5><span class="badge-d" style="background:var(--primary);">D1</span> Define Team Assignment (D1 - D8 PIC)</h5>
+    
+    <div class="row g-2 text-center row-cols-2 row-cols-sm-4 row-cols-md-8 mb-3">
+      <!-- D1 - Otomatis-->
+      <div class="col">
+        <label class="small fw-bold">D1</label>
+        <input type="text" id="fuPicD1" class="form-control form-control-sm" readonly>
+      </div>
+<!-- D2 - Otomatis-->
+      <div class="col">
+        <label class="small fw-bold">D2</label>
+        <input type="text" id="fuPicD2" class="form-control form-control-sm" readonly>
+      </div>
+    
+      <!-- D3-D8 dropdown -->
+      <div class="col">
+        <label class="small fw-bold">D3 (Interim act by)</label>
+        <select id="fuPicD3" class="form-select form-select-sm auditor-list" 
+        onchange="document.getElementById('fuInterimActBy').value = this.value"></select>
+      </div>
+      
+      <div class="col">
+        <label class="small fw-bold">D4 (RCA by)</label>
+       <select id="fuPicD4Select" class="form-select form-select-sm auditor-list"
+  onchange="document.getElementById('fuPicD4').value = this.value">
+</select>
+      </div>
+      
+      <div class="col">
+        <label class="small fw-bold">D5 (CA by)</label>
+        <select id="fuPicD5Select" class="form-select form-select-sm auditor-list" 
+          onchange="document.getElementById('fuPicD5').value = this.value"></select>
+      </div>
+      <div class="col">
+        <label class="small fw-bold">D6 (Valid CA by)</label>
+        <select id="fuPicD6Select" class="form-select form-select-sm auditor-list" 
+          onchange="document.getElementById('fuPicD6').value = this.value"></select>
+      </div>
+      <div class="col">
+        <label class="small fw-bold">D7 (PA by)</label>
+        <select id="fuPicD7Select" class="form-select form-select-sm auditor-list" 
+          onchange="document.getElementById('fuPicD7').value = this.value"></select>
+      </div>
+      <div class="col">
+        <label class="small fw-bold">D8 (Approved by)</label>
+        <select id="fuPicD8Select" class="form-select form-select-sm auditor-list"
+          onchange="document.getElementById('fuPicD7').value = this.value"></select>
+      </div>
+    </div>
+
+  
+   <!-- Tombol Update PIC dengan Spinner -->
+<div class="d-flex justify-content-end">
+<button class="btn-submit-d" onclick="updatePIC()" id="btnUpdatePIC" style="background: var(--primary); min-width: 150px;">
+  <span id="btnUpdatePICText">
+    <i class="fas fa-sync-alt"></i> Update PIC
+  </span>
+  <span id="btnUpdatePICSpinner" class="spinner-container">
+    <span class="spinner-border spinner-border-sm text-light" role="status" aria-hidden="true"></span>
+    <span class="text-light ms-1">Updating...</span>
+  </span>
+</button>
+</div>
+</div> 
+  
+  <!-- ===== D2: NON-CONFORMITY REPORT (View Only) ===== -->
+  <div class="followup-section" style="border-left-color: #6c757d;">
+    <h5>
+  <span class="badge-d" style="background:#6c757d;">D2</span> 
+  PROBLEM DESCRIPTION
+  <div class="ms-auto d-flex align-items-center gap-2">
+    <div class="form-check form-switch mb-0">
+      <input class="form-check-input" type="checkbox" id="toggleD2Edit" 
+             onchange="toggleD2Mode(this.checked)">
+      <label class="form-check-label small" for="toggleD2Edit" id="labelD2Mode">
+        VIEW ONLY
+      </label>
+    </div>
+    <button class="btn-submit-d btn-sm" id="btnUpdateD2" 
+            onclick="submitD2Update()" style="display:none;">
+      <i class="fas fa-save"></i> Update D2
+    </button>
+  </div>
+</h5>
+   
+    
+    <div class="row g-3">
+      <!-- Row 1: Issued By, Issued Date, ID No -->
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Issued By</label>
+        <input type="text" id="fuViewIssuedBy" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Issued Date</label>
+        <input type="text" id="fuViewIssuedDate" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-bold">ID No.</label>
+        <input type="text" id="fuViewIdNo" class="form-control" readonly>
+      </div>
+      
+      <!-- Row 2: Type, Category, Shift/Time -->
+      <div class="col-md-4">
+        <label class="form-label fw-bold">NCR Type</label>
+        <input type="text" id="fuViewType" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Product Category</label>
+        <input type="text" id="fuViewCategory" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Shift/Time</label>
+        <input type="text" id="fuViewShiftTime" class="form-control" readonly>
+      </div>
+      
+      <!-- Row 3: Part No, Customer Name, Location -->
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Part No / Name</label>
+        <input type="text" id="fuViewPartNo" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Customer Name</label>
+        <input type="text" id="fuViewCustomerName" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Location / Area</label>
+        <input type="text" id="fuViewLocation" class="form-control" readonly>
+      </div>
+      
+      <!-- Row 4: Qty Affected, Sample, NC -->
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Affected Qty</label>
+        <input type="text" id="fuViewAffectedQty" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-bold">Sample Qty</label>
+        <input type="text" id="fuViewSampleQty" class="form-control" readonly>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-bold">NC Qty</label>
+        <input type="text" id="fuViewNcQty" class="form-control" readonly>
+      </div>
+      
+      <!-- Row 5: NC Mode, NC Category -->
+      <div class="col-md-6">
+        <label class="form-label fw-bold">NC Mode</label>
+        <input type="text" id="fuViewNcMode" class="form-control" readonly>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-bold">NC Category</label>
+        <input type="text" id="fuViewNcCategory" class="form-control" readonly>
+      </div>
+      
+      <!-- Row 6: Detail NC -->
+      <div class="col-12">
+        <label class="form-label fw-bold">Details NC</label>
+        <textarea id="fuViewDetailNC" class="form-control" rows="2" readonly></textarea>
+      </div>
+      
+      <!-- Row 7: How it detected -->
+      <div class="col-12">
+        <label class="form-label fw-bold">How it detected?</label>
+        <textarea id="fuViewHowDetected" class="form-control" rows="2" readonly></textarea>
+      </div>
+      
+      <!-- Row 8: Interim Act -->
+      <div class="col-12">
+        <label class="form-label fw-bold">Interim Act / Containment Action</label>
+        <textarea id="fuViewInterimAct" class="form-control" rows="2" readonly></textarea>
+      </div>
+      
+      <!-- Row 9: Sorting Required -->
+      <div class="col-md-6">
+        <label class="form-label fw-bold">Is sorting, repair or rework required?</label>
+        <input type="text" id="fuViewSortingRequired" class="form-control" readonly>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-bold">Sorting Rework PIC</label>
+        <input type="text" id="fuViewSortingPIC" class="form-control" readonly>
+      </div>
+    </div>
+      
+<!-- ===== 📷 FOTO NC - DITARUH DI SINI (setelah semua field) ===== -->
+<div class="col-12">
+  <hr>
+  <div class="row g-3">
+    <!-- Foto Bad Sample -->
+    <div class="col-md-6">
+      <label class="form-label fw-bold">📷 Foto Bad Sample (NC)</label>
+      <div id="fuPhotoContainer">
+        <div id="fuPhotoPlaceholder" class="img-placeholder" style="height:200px; background:#f8f9fa; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#adb5bd; border:2px dashed #dee2e6;">
+          <i class="fas fa-image fa-3x"></i>
+          <p class="mt-2 mb-0">Belum ada foto</p>
+        </div>
+        <img id="fuPhotoDisplay" src="#" alt="NCR Photo" style="display:none; max-width:100%; max-height:300px; border-radius:8px; border:5px solid #dc3545; object-fit:contain; background:#fafafa;">
+      </div>
+    </div>
+
+    <!-- 🔥 Foto Good Sample — BARU -->
+    <div class="col-md-6">
+      <label class="form-label fw-bold">📷 Foto Good Sample (OK)</label>
+      <div id="fuPhotoGoodContainer">
+        <div id="fuPhotoGoodPlaceholder" class="img-placeholder" style="height:200px; background:#f8f9fa; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#adb5bd; border:2px dashed #dee2e6;">
+          <i class="fas fa-image fa-3x"></i>
+          <p class="mt-2 mb-0">Belum ada foto</p>
+        </div>
+        <img id="fuPhotoGoodDisplay" src="#" alt="OK Sample Photo" style="display:none; max-width:100%; max-height:300px; border-radius:8px; border:5px solid #198754; object-fit:contain; background:#fafafa;">
+      </div>
+    </div>
+  </div>
+  
+  <!-- Upload foto baru (hanya muncul di EDIT MODE) -->
+  <div id="fuPhotoEditSection" style="display:none; margin-top:10px;">
+    <label class="form-label fw-bold">📷 Ganti Foto</label>
+    <div class="d-flex gap-2 flex-wrap">
+      <input type="file" id="fuPhotoUpload" class="form-control" accept="image/*" onchange="previewFuPhoto(event)" style="flex:1; min-width:150px;">
+      <button type="button" class="btn btn-primary" onclick="openCameraFu()" style="white-space:nowrap;">
+        <i class="fas fa-camera"></i> Ambil Foto
+      </button>
+    </div>
+    <div id="fuPhotoPreviewContainer" class="mt-2" style="display:none;">
+      <img id="fuPhotoPreview" src="#" alt="Preview" style="max-width:200px; max-height:200px; border-radius:8px; border:1px solid #ddd; padding:4px; background:white;">
+      <button type="button" class="btn btn-sm btn-danger ms-2" onclick="removeFuPhoto()">
+        <i class="fas fa-trash"></i> Hapus
+      </button>
+    </div>
+    <small class="text-muted">Format: JPG, PNG (Max 5MB)</small>
+  </div>
+</div>
+ </div>   
+  
+      <!-- ===== D3 - Interim/Containment Action ===== -->
+    <div class="followup-section" style="border-left-color: #ff9800;">
+      <h5><span class="badge-d" style="background:#ff9800;">D3</span> Interim/Containment Action</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Interim act by</label>
+         <input type="text" id="fuInterimActBy" class="form-control" readonly 
+       style="background:#e8f0fe;">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Interim Act Date</label>
+          <input type="date" id="fuInterimDate" class="form-control">
+        </div>
+        <div class="col-12">
+          <label class="form-label">Interim Act Remarks</label>
+          <textarea id="fuInterimRemarks" class="form-control highlight-area" rows="3" placeholder="Describe interim containment actions..."></textarea>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Qty Ok after sort</label>
+          <input type="number" id="fuTotalOK" class="form-control" value="0">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Qty Reject Final</label>
+          <input type="number" id="fuQtyReject" class="form-control" value="0">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Total Man-Hours</label>
+          <input type="number" id="fuManHours" class="form-control" value="0">
+        </div>
+        <div class="col-12 mt-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-3 align-items-center">
+          
+    <!-- Toggle Edit/View D3 -->
+    <div class="form-check form-switch mb-0">
+      <input class="form-check-input" type="checkbox" id="toggleD3Edit" onchange="toggleD3Mode(this.checked)">
+      <label class="form-check-label small" for="toggleD3Edit" id="labelD3Mode">VIEW ONLY</label>
+    </div>
+    <!-- Notice PIC Button -->
+    <button class="btn btn-outline-primary btn-sm" onclick="noticePICD3()">
+      <i class="fas fa-envelope"></i> Notice PIC D3
+    </button>
+  </div>
+  <!-- Submit D3 dengan Spinner -->
+  <button class="btn-submit-d" onclick="submitD3()" id="btnSubmitD3">
+    <span id="btnSubmitD3Text">
+      <i class="fas fa-check-circle"></i> Submit D3
+    </span>
+    <span id="btnSubmitD3Spinner" class="spinner-container">
+      <span class="spinner-border spinner-border-sm text-light"></span>
+      <span class="text-light ms-1">Saving...</span>
+    </span>
+  </button>
+        </div>
+      </div>
+    </div>
+  </div>    
+ 
+
+<!-- ===== D4 - Root Cause Analysis ===== -->
+<div class="followup-section" style="border-left-color: #9c27b0;">
+  <h5><span class="badge-d" style="background:#9c27b0;">D4</span> Identify, Analysis and Verify The Root Cause</h5>
+  
+  <div class="row g-3">
+    <!-- RC analysis by & RC-Analysis Date -->
+    <div class="col-md-6">
+      <label class="form-label">RC analysis by</label>
+      <input type="text" id="fuPicD4" class="form-control" readonly style="background:#e8f0fe;">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">RC-Analysis Date</label>
+      <input type="date" id="fuRCAdate" class="form-control">
+    </div>
+    
+    <!-- Root Cause Occurrence -->
+    <div class="col-12">
+      <label class="form-label">A. Root-Cause (Occurrence)</label>
+      <textarea id="fuRootCauseOcc" class="form-control highlight-area" rows="2" placeholder="Describe occurrence root cause..."></textarea>
+    </div>
+    
+    <!-- Root Cause Skip -->
+    <div class="col-12">
+      <label class="form-label">B. Root-Cause (Skip)</label>
+      <textarea id="fuRootCauseSkip" class="form-control highlight-area" rows="2" placeholder="Describe skip root cause..."></textarea>
+    </div>
+    
+    <!-- RC Factor (5M+E) - SINGLE SELECTION -->
+    <div class="col-12">
+      <label class="form-label">RC Factor (5M+E)</label>
+      <select id="fuRCFactor" class="form-select highlight-area">
+        <option value="">-- Select 5M+E Factor --</option>
+        <option value="Man">Man</option>
+        <option value="Machine">Machine</option>
+        <option value="Material">Material</option>
+        <option value="Method">Method</option>
+        <option value="Measurement">Measurement</option>
+        <option value="Environment">Environment</option>
+      </select>
+    </div>
+    
+    <!-- Tombol Notice & Submit -->
+    <div class="col-12 mt-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-3 align-items-center">
+          <!-- Toggle Edit/View D4 -->
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="toggleD4Edit" onchange="toggleD4Mode(this.checked)">
+            <label class="form-check-label small" for="toggleD4Edit" id="labelD4Mode">VIEW ONLY</label>
+          </div>
+          <!-- Notice PIC Button -->
+          <button class="btn btn-outline-primary btn-sm" onclick="noticePICD4()">
+            <i class="fas fa-envelope"></i> Notice PIC D4
+          </button>
+        </div>
+        <!-- Submit D4 dengan Spinner -->
+        <button class="btn-submit-d" onclick="submitD4()" id="btnSubmitD4">
+          <span id="btnSubmitD4Text">
+            <i class="fas fa-check-circle"></i> Submit D4
+          </span>
+          <span id="btnSubmitD4Spinner" class="spinner-container">
+            <span class="spinner-border spinner-border-sm text-light"></span>
+            <span class="text-light ms-1">Saving...</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div> 
+</div> 
+ 
+
+    <!-- ===== D5 - Corrective Action ===== -->
+ 
+    <div class="followup-section" style="border-left-color: #2196f3;">
+      <h5><span class="badge-d" style="background:#2196f3;">D5</span> Corrective Action</h5>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Corrective Action by</label>
+          <input type="text" id="fuPicD5" class="form-control" readonly 
+            style="background:#e8f0fe;">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Corrective Action Date</label>
+          <input type="date" id="fuCAdate" class="form-control">
+        </div>
+
+        
+<!-- Corrective action -->
+        <div class="col-12">
+          <label class="form-label">A. Corrective action (Occurrence)</label>
+          <textarea id="fuCAOcc" class="form-control highlight-area" rows="2" placeholder="Describe corrective action for occurrence..."></textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label">B. Corrective action (Skip)</label>
+          <textarea id="fuCASkip" class="form-control highlight-area" rows="2" placeholder="Describe corrective action for skip..."></textarea>
+        </div>
+
+        
+<!-- Tombol Notice & Submit -->
+    <div class="col-12 mt-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-3 align-items-center">
+          <!-- Toggle Edit/View D5 -->
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="toggleD5Edit" onchange="toggleD5Mode(this.checked)">
+            <label class="form-check-label small" for="toggleD5Edit" id="labelD5Mode">VIEW ONLY</label>
+          </div>
+          <!-- Notice PIC Button -->
+          <button class="btn btn-outline-primary btn-sm" onclick="noticePICD5()">
+            <i class="fas fa-envelope"></i> Notice PIC D5
+          </button>
+        </div>
+        <!-- Submit D5 dengan Spinner -->
+        <button class="btn-submit-d" onclick="submitD5()" id="btnSubmitD5">
+          <span id="btnSubmitD5Text">
+            <i class="fas fa-check-circle"></i> Submit D5
+          </span>
+          <span id="btnSubmitD5Spinner" class="spinner-container">
+            <span class="spinner-border spinner-border-sm text-light"></span>
+            <span class="text-light ms-1">Saving...</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div> 
+
+
+    <!-- ===== D6 - Verify Corrective Action ===== -->
+      <div class="followup-section" style="border-left-color: #4caf50;">
+      <h5><span class="badge-d" style="background:#4caf50;">D6</span> Verify Corrective Action</h5>
+      <div class="row g-3">
+       <div class="col-md-6">
+           <label class="form-label">Verify Corrective Action by</label>
+          <input type="text" id="fuPicD6" class="form-control" readonly 
+            style="background:#e8f0fe;">
+        </div>
+      <div class="col-md-6">
+          <label class="form-label">Verify Corrective Action Date</label>
+          <input type="date" id="fuValDate" class="form-control">
+        </div>
+
+          <div class="col-12">
+          <label class="form-label">A. Verification of Corrective action (Occurrence)</label>
+          <textarea id="fuValOcc" class="form-control highlight-area" rows="2" placeholder="Verification for occurrence..."></textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label">B. Verification of Corrective action (Skip)</label>
+          <textarea id="fuValSkip" class="form-control highlight-area" rows="2" placeholder="Verification for skip..."></textarea>
+        </div>
+ <div class="col-12">
+      <label class="form-label">Verification Result</label>
+      <select id="fuValRslt" class="form-select highlight-area">
+        <option value="">-- Select Result --</option>
+        <option value="Accepted">Accepted</option>
+        <option value="Rejected">Rejected</option>
+        </select>
+    </div>
+        
+<!-- Tombol Notice & Submit -->
+    <div class="col-12 mt-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-3 align-items-center">
+          <!-- Toggle Edit/View D6 -->
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="toggleD6Edit" onchange="toggleD6Mode(this.checked)">
+            <label class="form-check-label small" for="toggleD6Edit" id="labelD6Mode">VIEW ONLY</label>
+          </div>
+          <!-- Notice PIC Button -->
+          <button class="btn btn-outline-primary btn-sm" onclick="noticePICD6()">
+            <i class="fas fa-envelope"></i> Notice PIC D6
+          </button>
+        </div>
+        <!-- Submit D6 dengan Spinner -->
+        <button class="btn-submit-d" onclick="submitD6()" id="btnSubmitD6">
+          <span id="btnSubmitD6Text">
+            <i class="fas fa-check-circle"></i> Submit D6
+          </span>
+          <span id="btnSubmitD6Spinner" class="spinner-container">
+            <span class="spinner-border spinner-border-sm text-light"></span>
+            <span class="text-light ms-1">Saving...</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div> 
+
+
+    <!-- ===== D7 - Preventive Action ===== -->
+    
+  <div class="followup-section" style="border-left-color: #ff5722;">
+      <h5><span class="badge-d" style="background:#ff5722;">D7</span> Preventive Action</h5>
+      <div class="row g-3">
+       <div class="col-md-6">
+          <label class="form-label">Preventive Action by</label>
+          <input type="text" id="fuPicD7" class="form-control" readonly 
+            style="background:#e8f0fe;">
+        </div>    
+ <div class="col-md-6">
+          <label class="form-label">Preventive Action Date</label>
+          <input type="date" id="fuPADate" class="form-control">
+        </div>
+  <div class="col-12">
+          <label class="form-label">A. Preventive action (Occurrence)</label>
+          <textarea id="fuPAOcc" class="form-control highlight-area" rows="2" placeholder="Verification result for occurrence..."></textarea>
+        </div>
+<div class="col-12">
+          <label class="form-label">B. Preventive action (Skip)</label>
+          <textarea id="fuPASkip" class="form-control highlight-area" rows="2" placeholder="Verification result for occurrence..."></textarea>
+        </div>
+
+        
+<!-- Tombol Notice & Submit -->
+    <div class="col-12 mt-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-3 align-items-center">
+          <!-- Toggle Edit/View D7 -->
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="toggleD7Edit" onchange="toggleD7Mode(this.checked)">
+            <label class="form-check-label small" for="toggleD7Edit" id="labelD7Mode">VIEW ONLY</label>
+          </div>
+          <!-- Notice PIC Button -->
+          <button class="btn btn-outline-primary btn-sm" onclick="noticePICD7()">
+            <i class="fas fa-envelope"></i> Notice PIC D7
+          </button>
+        </div>
+        <!-- Submit D7 dengan Spinner -->
+        <button class="btn-submit-d" onclick="submitD7()" id="btnSubmitD7">
+          <span id="btnSubmitD7Text">
+            <i class="fas fa-check-circle"></i> Submit D7
+          </span>
+          <span id="btnSubmitD7Spinner" class="spinner-container">
+            <span class="spinner-border spinner-border-sm text-light"></span>
+            <span class="text-light ms-1">Saving...</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+ </div>
+
+        
+
+        
+
+    <!-- ===== D8 - Closure & Validation ===== -->
+    <div class="followup-section" style="border-left-color: #e91e63;">
+      <h5><span class="badge-d" style="background:#e91e63;">D8</span> Closure & Validation</h5>
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="alert alert-success">
+            <i class="fas fa-trophy me-2"></i>
+            <strong>Congratulations!</strong> Thank you for completing the NCR report. Your team's effort is appreciated.
+          </div>
+        </div>
+
+         <div class="row g-3">
+       <div class="col-md-6">
+          <label class="form-label">Approved by</label>
+          <input type="text" id="fuPicD8" class="form-control" readonly 
+            style="background:#e8f0fe;">
+        </div>  
+           
+        <div class="col-md-6">
+          <label class="form-label">Approve Date</label>
+          <input type="date" id="fuCloseDate" class="form-control">
+        </div>  
+           
+        <div class="col-md-9">
+          <label class="form-label">Congratulation Note</label>
+          <textarea id="fuCongMsg" class="form-control highlight-area" rows="3" placeholder="Summary of the entire 8D process..."></textarea>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">NC Status</label>
+          <select id="fuStatusNC" class="form-select">
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Closed">Closed</option>
+          </select>
+        </div>
+       
+    <!-- Tombol Notice & Submit -->
+    <div class="col-12 mt-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-3 align-items-center">
+          <!-- Toggle Edit/View D8 -->
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="toggleD8Edit" onchange="toggleD8Mode(this.checked)">
+            <label class="form-check-label small" for="toggleD8Edit" id="labelD8Mode">VIEW ONLY</label>
+          </div>
+          <!-- Notice PIC Button -->
+          <button class="btn btn-outline-primary btn-sm" onclick="noticePICD8()">
+            <i class="fas fa-envelope"></i> Notice PIC D8
+          </button>
+        </div>
+        <!-- Submit D7 dengan Spinner -->
+        <button class="btn-submit-d" onclick="submitD8()" id="btnSubmitD8">
+          <span id="btnSubmitD8Text">
+            <i class="fas fa-check-circle"></i> Submit D8
+          </span>
+          <span id="btnSubmitD8Spinner" class="spinner-container">
+            <span class="spinner-border spinner-border-sm text-light"></span>
+            <span class="text-light ms-1">Saving...</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+ </div>
+</div>   
+</div>        
+
+<script>
+  // ==========================================
+// 1. KONFIGURASI & VARIABEL
+// ==========================================
+const API_URL = 'https://br-mute-mode-b45pfpo5-api.compute.c-6.us-east-2.aws.neon.tech';
+let rawDataNCR = [];
+let currentUser = null;
+let currentFollowUpId = null;
+let auditorList = [];
+
+// ✅ TAMBAHKAN INI (setelah variabel lain)
+let fuUploadedPhotoData = null;   // Untuk menyimpan base64 foto follow-up
+let fuUploadedPhotoName = null;   // Untuk menyimpan nama file foto follow-up
+  
+// ==========================================
+// 2. MAPPING KOLOM GOOGLE SHEETS
+// ==========================================
+const columnMapping = {
+ 'D3': {
+  'fuInterimActBy': 'InterimActBy',  
+  'fuInterimDate': 'InterimActionDate',
+  'fuInterimRemarks': 'InterimRemarks',
+  'fuTotalOK': 'TotalOK',
+  'fuQtyReject': 'FinalRejectQty',
+  'fuManHours': 'TotalManHour',
+  'fuNoticeD3': 'NoticeD3'
+},
+  
+ 'D4': {
+        'fuRootCauseOcc': 'RootCauseOcc',
+        'fuRootCauseSkip': 'RootCause(Escape)',
+        'fuRCFactor': '5M1E-Factor',
+        'fuPicD4': 'RC-AnalysisBy',
+        'fuRCAdate': 'RC-AnalysisDate'
+      },
+  
+  'D5': {
+    'fuCAOcc': 'CorrectiveActOccur',
+    'fuCASkip': 'CorrectiveActSkip',
+    'fuPicD5': 'CABy',
+    'fuCAdate': 'CADate'
+  },
+  'D6': {
+    'fuValOcc': 'ValidationCAOcc',
+    'fuValSkip': 'ValidationCASkip',
+    'fuPicD6': 'ValidateCAPABy',
+    'fuValRslt': 'ValidationResult',
+    'fuValDate': 'ValidateCAPADate'
+  },
+  'D7': {
+    'fuPAOcc': 'PAOcc',
+    'fuPASkip': 'PASkip',
+    'fuPicD7': 'PABy',
+    'fuPADate': 'PADate'
+  },
+  'D8': {
+  'fuPicD8'   : 'ApprovedBy',
+  'fuCloseDate': 'CloseDate',
+  'fuCongMsg' : 'CongratulationMsg',
+  'fuStatusNC': 'StatusNC'
+}
+};
+
+// ==========================================
+// 3. FUNGSI LOGIN
+// ==========================================
+async function doLogin() {
+  const name = document.getElementById('loginName').value.trim();
+  const id = document.getElementById('loginId').value.trim();
+  
+  if (!name || !id) {
+    document.getElementById('loginError').style.display = 'block';
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: name, userid: id })
+    });
+    
+    const result = await res.json();
+    
+    if (result.status !== 'ok') {
+      document.getElementById('loginError').style.display = 'block';
+      return;
+    }
+    
+    // Simpan token
+    localStorage.setItem('authToken', result.token);
+    localStorage.setItem('authUser', JSON.stringify(result.user));
+    localStorage.setItem('lastUser', result.user.username);
+    
+    currentUser = {
+      name: result.user.username,
+      id: result.user.userid,
+      role: result.user.userrule,
+      layer: result.user.layerno,
+      email: result.user.email,
+      isGuest: false
+    };
+    
+    document.getElementById('navUserName').innerText = currentUser.name;
+    document.getElementById('navAvatar').innerText = currentUser.name.charAt(0).toUpperCase();
+    
+    document.getElementById('loginPage').classList.remove('active');
+    document.getElementById('appShell').classList.add('active');
+    
+    loadAllData();
+    
+  } catch (err) {
+    console.error('Login error:', err);
+    document.getElementById('loginError').textContent = 'Connection error. Try again.';
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function applyGuestRestrictions() {
+  if (!currentUser || !currentUser.isGuest) return;
+  
+  // Sembunyikan semua toggle Edit/View
+  ['D2','D3','D4','D5','D6','D7','D8'].forEach(d => {
+    const toggle = document.getElementById(`toggleD${d.slice(1)}Edit`);
+    if (toggle) toggle.closest('.form-check').style.display = 'none';
+  });
+  
+  // Sembunyikan tombol Update PIC
+  const btnUpdatePIC = document.getElementById('btnUpdatePIC');
+  if (btnUpdatePIC) btnUpdatePIC.style.display = 'none';
+  
+  // Sembunyikan tombol Update D2
+  const btnUpdateD2 = document.getElementById('btnUpdateD2');
+  if (btnUpdateD2) btnUpdateD2.style.display = 'none';
+  
+  // Sembunyikan tombol Notice PIC
+  document.querySelectorAll('[onclick^="noticePIC"]').forEach(btn => {
+    btn.style.display = 'none';
+  });
+
+  // ✅ Sembunyikan tombol Submit D3-D8
+  ['D3','D4','D5','D6','D7','D8'].forEach(d => {
+    const btn = document.getElementById(`btnSubmit${d}`);
+    if (btn) btn.style.display = 'none';
+  });
+
+  // ✅ Sembunyikan tombol Create NCR di navbar
+  const btnCreate = document.querySelector('[onclick="openCreateForm()"]');
+  if (btnCreate) btnCreate.style.display = 'none';
+}
+
+function doGuestLogin() {
+  currentUser = { name: 'Guest', id: 'GUEST', isGuest: true };
+  document.getElementById('navUserName').innerText = 'Guest (View Only)';
+  document.getElementById('navAvatar').innerText = '👤';
+  
+  document.getElementById('loginPage').classList.remove('active');
+  document.getElementById('appShell').classList.add('active');
+  
+  loadAllData();
+  
+  // ✅ TAMBAHKAN INI
+  applyGuestRestrictions();
+}
+
+function doLogout() {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('authUser');
+  currentUser = null;
+  document.getElementById('appShell').classList.remove('active');
+  document.getElementById('loginPage').classList.add('active');
+  document.getElementById('loginName').value = '';
+  document.getElementById('loginId').value = '';
+  document.getElementById('loginError').style.display = 'none';
+}
+
+// ==========================================
+// 4. FUNGSI NAVIGASI
+// ==========================================
+function showDashboard() {
+  document.getElementById('sectionDashboard').style.display = 'block';
+  document.getElementById('ncrFormPage').style.display = 'none';
+  document.getElementById('followUpPage').style.display = 'none';
+  currentFollowUpId = null;
+}
+
+// ✅ FUNGSI BARU
+function resetPhotoUpload() {
+  window.photoBadFile = null;
+  window.photoGoodFile = null;
+
+  const badInput = document.getElementById('photoUploadBad');
+  if (badInput) badInput.value = '';
+  const badContainer = document.getElementById('photoPreviewBadContainer');
+  if (badContainer) badContainer.style.display = 'none';
+  const badPreview = document.getElementById('photoPreviewBad');
+  if (badPreview) badPreview.src = '#';
+
+  const goodInput = document.getElementById('photoUploadGood');
+  if (goodInput) goodInput.value = '';
+  const goodContainer = document.getElementById('photoPreviewGoodContainer');
+  if (goodContainer) goodContainer.style.display = 'none';
+  const goodPreview = document.getElementById('photoPreviewGood');
+  if (goodPreview) goodPreview.src = '#';
+}
+// ==========================================
+// FUNGSI RESET UPLOAD FOTO (Follow-up D2)
+// ==========================================
+// ✅ FUNGSI BARU
+function resetFuPhotoUpload() {
+  fuUploadedPhotoData = null;
+  fuUploadedPhotoName = null;
+  
+  const fuPhotoUpload = document.getElementById('fuPhotoUpload');
+  if (fuPhotoUpload) fuPhotoUpload.value = '';
+  
+  const fuPreviewContainer = document.getElementById('fuPhotoPreviewContainer');
+  if (fuPreviewContainer) fuPreviewContainer.style.display = 'none';
+  
+  const fuPreview = document.getElementById('fuPhotoPreview');
+  if (fuPreview) fuPreview.src = '#';
+}
+
+function openCreateForm() {
+  document.getElementById('sectionDashboard').style.display = 'none';
+  document.getElementById('ncrFormPage').style.display = 'block';
+  document.getElementById('followUpPage').style.display = 'none';
+
+  // ✅ Reset upload foto (versi baru, Bad & Good)
+  resetPhotoUpload();
+  
+  // ✅ 2. Reset form
+  const form = document.getElementById('formD1D2');
+  if (form) form.reset();
+  
+  // ✅ 3. Set nilai IssuedBy
+  const issuedByField = document.getElementById('issuedBy');
+  if (issuedByField) {
+    if (currentUser && currentUser.name) {
+      issuedByField.value = currentUser.name;
+    } else if (localStorage.getItem('lastUser')) {
+      issuedByField.value = localStorage.getItem('lastUser');
+    } else {
+      issuedByField.value = 'SiAnu';
+    }
+  }
+  
+  // ✅ 4. Re-assign D1 & D2
+  if (picDataMap && Object.keys(picDataMap).length > 0) {
+    assignCurrentUserPIC();
+  } else {
+    loadPICData();
+  }
+  
+  // ✅ 5. Generate ID No
+  generateIDNo();
+  
+  // ✅ 6. Terapkan guest restrictions
+  applyGuestRestrictions();
+}
+  
+function openFollowUp() {
+  document.getElementById('sectionDashboard').style.display = 'none';
+  document.getElementById('ncrFormPage').style.display = 'none';
+  document.getElementById('followUpPage').style.display = 'block';
+  
+  loadAuditors();
+  
+  if (!currentFollowUpId) {
+    document.getElementById('followUpId').textContent = 'Please select an NCR from dashboard';
+    document.getElementById('followUpType').textContent = '-';
+    document.getElementById('followUpCategory').textContent = '-';
+    document.getElementById('followUpStatus').textContent = 'Select NCR';
+  }
+}
+
+async function openFollowUpFromRow(idNo) {
+    currentFollowUpId = idNo;
+    localStorage.setItem('currentFollowUpId', idNo);
+    openFollowUp();
+
+    // 🔥 Cuma fetch ulang kalau auditorList BELUM ada (hindari panggilan boros)
+if (!auditorList || auditorList.length === 0) {
+  await loadAuditors();
+} else {
+  fillAuditorDropdowns(auditorList);  // pakai data yang sudah ada, tanpa fetch baru
+}
+
+    // 2. Cari data NCR
+    const ncr = rawDataNCR.find(r => r['ID No.'] === idNo);
+    if (!ncr) {
+        alert('⚠️ NCR with ID ' + idNo + ' not found!');
+        return;
+    }
+
+    // 3. Update header info
+    document.getElementById('followUpId').textContent = ncr['ID No.'] || '-';
+    document.getElementById('followUpType').textContent = ncr.Type || '-';
+    document.getElementById('followUpCategory').textContent = ncr.Category || '-';
+
+    const status = ncr.StatusNC || 'Open';
+    const statusEl = document.getElementById('followUpStatus');
+    statusEl.textContent = status;
+    statusEl.className = 'badge ' + (status === 'Closed' ? 'status-done' :
+                                    status === 'In Progress' ? 'status-progress' : 'status-open');
+
+    // 4. Isi semua field section (D2-D8), termasuk fuInterimActBy, fuPicD4, dst
+    loadNCRViewData(ncr);
+
+    // 5. Isi D1 & D2 (dari IssuedBy)
+    assignFollowUpPIC();
+
+    // 6. BARU SEKARANG isi dropdown D1 (D3-D8), setelah semua di atas pasti selesai
+    fillD1DropdownsFromSection();
+
+    // 7. Reset toggle ke VIEW ONLY
+    document.getElementById('toggleD3Edit').checked = false;
+    toggleD3Mode(false);
+    document.getElementById('toggleD4Edit').checked = false;
+    toggleD4Mode(false);
+  // 🔥 TAMBAHKAN 4 BLOK INI
+    document.getElementById('toggleD5Edit').checked = false;
+    toggleD5Mode(false);
+    document.getElementById('toggleD6Edit').checked = false;
+    toggleD6Mode(false);
+    document.getElementById('toggleD7Edit').checked = false;
+    toggleD7Mode(false);
+    document.getElementById('toggleD8Edit').checked = false;
+    toggleD8Mode(false);
+
+    applyGuestRestrictions();
+}
+  
+function getActiveDandPIC(r) {
+  // Jika sudah closed
+  if (r.StatusNC === 'Closed') {
+    return { d: 'Closed', pic: r.ApprovedBy || '-' };
+  }
+  
+  // Cek D3-D8 berdasarkan tanggal
+  const checks = [
+    { d: 'D3', date: r['InterimActionDate'], pic: r['InterimActBy'] },
+    { d: 'D4', date: r['RC-AnalysisDate'],   pic: r['RC-AnalysisBy'] },
+    { d: 'D5', date: r['CADate'],            pic: r['CABy'] },
+    { d: 'D6', date: r['ValidateCAPADate'],  pic: r['ValidateCAPABy'] },
+    { d: 'D7', date: r['PADate'],            pic: r['PABy'] },
+    { d: 'D8', date: r['CloseDate'],         pic: r['ApprovedBy'] },
+  ];
+  
+  for (const item of checks) {
+    if (!item.date || String(item.date).trim() === '') {
+      return { d: item.d, pic: item.pic || '-' };
+    }
+  }
+  
+  return { d: 'Closed', pic: r.ApprovedBy || '-' };
+}
+  
+  
+  
+// ==========================================
+// 5. FUNGSI DATA
+// ==========================================
+async function loadAllData() {
+  showSyncIndicator();
+  try {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${API_URL}/ncr`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const res = await response.json();
+
+    if (res.status !== 'ok') throw new Error(res.message || 'Unknown error');
+
+    // Map data dari Neon (snake_case) ke format yang dipakai frontend (PascalCase)
+    rawDataNCR = res.data.map(r => ({
+      'ID No.': r.id_no,
+      'Type': r.type,
+      'Category': r.category,
+      'IssuedBy': r.issued_by,
+      'IssuedDate': r.issued_date,
+      'ShiftTime': r.shift_time,
+      'CustomerName': r.customer_name,
+      'PartNo': r.part_no,
+      'AffectedQty': r.affected_qty,
+      'SamplingQty': r.sampling_qty,
+      'RejectQtyDeclated': r.reject_qty_declared,
+      'DetectionLocation': r.detection_location,
+      'DetailNC': r.detail_nc,
+      'NCPicture': r.nc_picture,
+      'OKPicture': r.ok_picture,
+      'NCCatagory': r.nc_category,
+      'NCMode': r.nc_mode,
+      'HowItDetected': r.how_it_detected,
+      'InterimAction': r.interim_action,
+      'SortingRepairReworkRequired': r.sorting_repair_rework_required,
+      'SortingReworkPIC': r.sorting_rework_pic,
+      'InterimRemarks': r.interim_remarks,
+      'FinalRejectQty': r.final_reject_qty,
+      'TotalManHour': r.total_man_hour,
+      'TotalOK': r.total_ok,
+      'InterimActBy': r.interim_act_by,
+      'InterimActionDate': r.interim_action_date,
+      'RootCauseOcc': r.root_cause_occ,
+      'RootCause(Escape)': r.root_cause_escape,
+      '5M1E-Factor': r.factor_5m1e,
+      'RC-AnalysisBy': r.rc_analysis_by,
+      'RC-AnalysisDate': r.rc_analysis_date,
+      'CorrectiveActOccur': r.corrective_act_occur,
+      'CorrectiveActSkip': r.corrective_act_skip,
+      'CABy': r.ca_by,
+      'CADate': r.ca_date,
+      'PAOcc': r.pa_occ,
+      'PASkip': r.pa_skip,
+      'PABy': r.pa_by,
+      'PADate': r.pa_date,
+      'ValidateCAPABy': r.validate_capa_by,
+      'ValidateCAPADate': r.validate_capa_date,
+      'ValidationCAOcc': r.validation_ca_occ,
+      'ValidationCASkip': r.validation_ca_skip,
+      'ValidationResult': r.validation_result,
+      'StatusNC': r.status_nc,
+      'ApprovedBy': r.approved_by,
+      'CloseDate': r.close_date,
+      'CongratulationMsg': r.congratulation_msg,
+      'Period': r.period
+    }));
+
+    renderDashboard(rawDataNCR);
+    initCharts(rawDataNCR);
+    
+    hideSyncIndicator();
+  } catch(err) {
+    console.error('Error loading data:', err);
+    hideSyncIndicator();
+    alert('❌ Failed to load data: ' + err.message);
+  }
+}
+
+// 🔥 FUNGSI BARU — dipisah dari loadAuditors() lama,
+// supaya bisa dipakai ulang tanpa fetch baru
+function fillAuditorDropdowns(list) {
+  const dropdowns = [
+    'picD3','picD4','picD5','picD6','picD7','picD8',
+    'fuPicD3',
+    'fuPicD4Select','fuPicD5Select',
+    'fuPicD6Select','fuPicD7Select','fuPicD8Select'
+  ];
+
+  dropdowns.forEach(dropdownId => {
+    const select = document.getElementById(dropdownId);
+    if (select) {
+      select.innerHTML = '<option value="">-- Select PIC --</option>' +
+        list.map(a => `<option value="${a.AuditorName}">${a.AuditorName}</option>`).join('');
+    }
+  });
+}
+
+
+async function loadDashboardData() {
+  try {
+    const response = await fetch(`${API_URL}?action=getSummary`);
+    const res = await response.json();
+    if (res.status === 'ok') {
+      rawDataNCR = res.rows;
+      renderDashboard(rawDataNCR);
+      initCharts(rawDataNCR);
+    }
+  } catch(e) { 
+    console.error("Error loading data:", e);
+    document.getElementById('ncrTableBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Failed to load data. Check console.</td></tr>';
+  }
+}
+
+function renderDashboard(data) {
+  // Update KPI
+  document.getElementById('kpi-total').innerText = data.length;
+  document.getElementById('kpi-pdr').innerText = data.filter(r => r.Type === 'PDR').length;
+  document.getElementById('kpi-ncmr').innerText = data.filter(r => r.Type === 'NCMR').length;
+  document.getElementById('kpi-8d').innerText = data.filter(r => r.Type === '8D').length;
+
+  // Update Table
+  const tbody = document.getElementById('ncrTableBody');
+  if (data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-3">No active report found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(r => {
+    let detailNC = r.DetailNC || r.NCMode || '-';
+    if (detailNC.length > 50) detailNC = detailNC.substring(0, 47) + '...';
+    
+   const { d: activeD, pic: activePIC } = getActiveDandPIC(r);
+const dColor = activeD === 'Closed' ? '#2e7d32' : 
+               activeD === 'D3' ? '#ff9800' :
+               activeD === 'D4' ? '#9c27b0' :
+               activeD === 'D5' ? '#2196f3' :
+               activeD === 'D6' ? '#4caf50' :
+               activeD === 'D7' ? '#ff5722' :
+               activeD === 'D8' ? '#e91e63' : '#607d8b';
+    
+ return `
+  <tr>
+    <td><strong>${r['ID No.'] || '-'}</strong></td>
+    <td>${r.Category || '-'}</td>
+    <td>${r.IssuedBy || '-'}</td>
+    <td>${detailNC}</td>
+    <td>${r.CustomerName || '-'}</td>
+    <td>${formatDate(r.IssuedDate)}</td>
+    <td>
+      <span class="badge" style="background:${dColor}; font-size:11px;">${activeD}</span>
+      <br>
+      <small class="text-muted" style="font-size:11px;">${activePIC}</small>
+    </td>
+    <td>
+      <button class="btn btn-sm btn-primary" onclick="openFollowUpFromRow('${r['ID No.']}')">
+        <i class="fas fa-pen"></i> Follow-up
+      </button>
+    </td>
+  </tr>
+`;
+  }).join('');
+}
+
+  
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  try {
+    if (typeof dateStr === 'string' && dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+      }
+    }
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  } catch(e) {}
+  return dateStr;
+}
+
+function getFiscalPeriod(date) {
+  const month = date.getMonth(); // 0=Jan ... 11=Des
+  // April(3) = P1, jadi geser referensi ke April sebagai titik nol
+  const period = ((month - 3 + 12) % 12) + 1;
+  return 'P' + period;
+}  
+  
+function generateIDNo() {
+  const cat = document.getElementById('ncrType').value;
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const periodLabel = getFiscalPeriod(now);   // 🔥 dihitung otomatis, bukan hardcode "P7"
+
+  const countThisMonth = rawDataNCR.filter(r => {
+    const d = parseDate(r.IssuedDate);
+    return d && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).length;
+
+  const nextNum = countThisMonth + 1;
+  document.getElementById('idNo').value = `${cat}-${periodLabel}-${String(nextNum).padStart(3, '0')}`;
+}
+
+function filterDashboard(cat) {
+  if (cat === 'All') {
+    renderDashboard(rawDataNCR);
+    initCharts(rawDataNCR);
+  } else {
+    const filtered = rawDataNCR.filter(r => r.Category === cat);
+    renderDashboard(filtered);
+    initCharts(filtered);
+  }
+}
+
+// ==========================================
+// 6. FUNGSI AUDITOR
+// ==========================================
+// loadAuditors() TETAP DIPERTAHANKAN (dipakai terpisah di openFollowUpFromRow
+// & updatePIC saat butuh refresh list auditor tanpa reload semua data)
+async function loadAuditors() {
+  try {
+    const response = await fetch(`${API_URL}?action=getAuditors`);
+    const res = await response.json();
+
+    if (res.status === 'ok' && res.rows && res.rows.length > 0) {
+      auditorList = res.rows;
+      fillAuditorDropdowns(auditorList);
+      // 🔥 Selalu restore pilihan dropdown D1 kalau sedang di halaman Follow-up
+      //    (menjaga dari proses lain yang memanggil loadAuditors() tanpa disadari)
+      if (document.getElementById('followUpPage').style.display === 'block') {
+        fillD1DropdownsFromSection();
+      }
+    } else {
+      setFallbackAuditors();
+    }
+  } catch(e) {
+    console.error("Gagal memuat list auditor/PIC", e);
+    setFallbackAuditors();
+  }
+}
+
+function setFallbackAuditors() {
+  const fallbackNames = ['Yusrizal', 'Emilia', 'Panal', 'Firdaus', 'Sulastri', 'Ridwan', 'Denny', 'Jos', 'Hafizh', 'Junianto', 'Kharismaadil'];
+  const dropdowns = ['picD3', 'picD4', 'picD5', 'picD6', 'picD7', 'picD8',
+                     'fuPicD3', 'fuPicD4', 'fuPicD5', 'fuPicD6', 'fuPicD7', 'fuPicD8'];
+  
+  dropdowns.forEach(dropdownId => {
+    const select = document.getElementById(dropdownId);
+    if (select) {
+      select.innerHTML = '<option value="">-- Select PIC --</option>' + 
+        fallbackNames.map(name => `<option value="${name}">${name}</option>`).join('');
+    }
+  });
+}
+
+function sendNoticeEmail(picId, subjectText, bodyText) {
+  // 1. Cari auditor berdasarkan nama PIC
+  const auditor = auditorList.find(a => a.AuditorName === picName);
+  
+  // 2. Ambil email utama
+  const email = auditor?.Email || '';
+  
+  // 3. ===== CC EMAILS (OTOMATIS) =====
+  const ccFields = ['Email2', 'N1Email', 'qms1', 'qms2', 'QAEng'];
+  const ccString = ccFields
+    .map(field => auditor?.[field] || '')
+    .filter(email => email && email !== '')
+    .join(',');   // <-- CC otomatis dari sini!
+  
+  // 4. Buat mailto URL dengan CC
+  let mailtoUrl = `mailto:${email}`;
+  if (ccString) {
+    mailtoUrl += `?cc=${ccString}&subject=${subject}&body=${body}`;
+  }
+  
+  window.open(mailtoUrl, '_blank');
+}
+  
+// ==========================================
+// 7. FUNGSI SUBMIT NCR (CREATE)
+// ==========================================
+async function submitD1D2(e) {
+  e.preventDefault();
+  
+  const idNo = document.getElementById('idNo').value;
+  
+  // 🔥 Convert foto Bad & Good ke base64 (readFileAsBase64 sudah ada di kode Anda)
+  let photoBadBase64 = '';
+  let photoGoodBase64 = '';
+  
+  try {
+    if (window.photoBadFile) {
+      photoBadBase64 = await readFileAsBase64(window.photoBadFile);
+    }
+    if (window.photoGoodFile) {
+      photoGoodBase64 = await readFileAsBase64(window.photoGoodFile);
+    }
+  } catch(err) {
+    console.error('❌ Gagal membaca file foto:', err);
+  }
+  
+  console.log('📤 Photo Bad length:', photoBadBase64.length);
+  console.log('📤 Photo Good length:', photoGoodBase64.length);
+  
+  const formData = {
+    action: 'appendNCR',
+    timestamp: new Date().toISOString(),
+    data: {
+      'ID No.': idNo,
+      'Type': document.getElementById('ncrType').value,
+      'Category': document.getElementById('prodCategory').value,
+      'IssuedDate': new Date().toLocaleDateString('en-GB'),
+      'ShiftTime': document.getElementById('ShiftTime').value,
+      'PartNo': document.getElementById('partNo').value,
+      'CustomerName': document.getElementById('CustomerName').value,
+      'DetectionLocation': document.getElementById('location').value,
+      'AffectedQty': document.getElementById('affectedQty').value,
+      'SamplingQty': document.getElementById('smplQty').value,
+      'RejectQtyDeclated': document.getElementById('intlNcQty').value,
+      'NCMode': document.getElementById('ncMode').value,
+      'NCCatagory': document.getElementById('ncCategory').value,
+      'DetailNC': document.getElementById('DetailNC').value,
+      'HowItDetected': document.getElementById('howDetected').value,
+      'InterimAction': document.getElementById('interimAct').value,
+      'SortingRepairReworkRequired': document.getElementById('SortingRepairReworkRequired').value,
+      'SortingReworkPIC': document.getElementById('picD3').value,
+      'Period': new Date().toLocaleDateString('en-GB'),
+      'IssuedBy': document.getElementById('issuedBy').value,
+      'NCPicture': photoBadBase64,   // 🔥 foto Bad sample
+      'OKPicture': photoGoodBase64,  // 🔥 foto Good sample
+      'D1': document.getElementById('picD1').value,
+      'D2': document.getElementById('picD2').value,
+      'InterimActBy': document.getElementById('picD3').value,
+      'RC-AnalysisBy': document.getElementById('picD4').value,
+      'CABy': document.getElementById('picD5').value,
+      'ValidateCAPABy': document.getElementById('picD6').value,
+      'PABy': document.getElementById('picD7').value,
+      'ApprovedBy': document.getElementById('picD8').value,
+      'StatusNC': 'Open'
+    }
+  };
+
+ try {
+  showLoadingOverlay('Saving NCR...');
+  
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(formData)
+  });
+  
+  const result = await response.json();
+  console.log('📤 Server response:', result);
+  
+  hideLoadingOverlay();
+  
+  if (result.status === 'ok') {
+    resetPhotoUpload();
+    alert('✅ NCR Submitted Successfully!');
+    showDashboard();
+    loadAllData();
+  } else {
+    alert('❌ Gagal menyimpan: ' + (result.message || 'Unknown error'));
+  }
+  
+} catch(err) {
+  hideLoadingOverlay();
+  console.error("❌ Submission error:", err);
+  alert("❌ Submission failed: " + err.message);
+}
+}
+  
+// ============================================================
+// FUNGSI: loadPICData() - DIPERLUAS!
+// ============================================================
+// 1. Mengambil data PIC dari Google Sheet (untuk D1 & D2)
+// 2. Mengisi D3-D8 dari section (yang sudah diisi oleh loadNCRViewData)
+// ============================================================
+
+let picDataMap = {};
+
+async function loadPICData() {
+    console.log('📌 loadPICData: START');
+    
+    try {
+        // ===== STEP 1: AMBIL DATA DARI GOOGLE SHEET =====
+        const response = await fetch(`${API_URL}?action=getPICData`);
+        const res = await response.json();
+        
+        if (res.status === 'ok' && res.data) {
+            picDataMap = res.data;
+            console.log('✅ PIC Data loaded from Google Sheet:', picDataMap);
+            
+            // ===== STEP 2: ISI D1 & D2 (Create Form) =====
+            assignCurrentUserPIC();
+            console.log('✅ D1 & D2 (Create Form) terisi');
+            
+            // ===== STEP 3: ISI D1 & D2 (Follow-up) =====
+            if (document.getElementById('followUpPage').style.display === 'block') {
+                assignFollowUpPIC();
+                console.log('✅ D1 & D2 (Follow-up) terisi');
+            }
+            
+// Dropdown D1 (D3-D8) akan diisi oleh fillD1DropdownsFromSection()
+// yang dipanggil terpisah di openFollowUpFromRow() / updatePIC()
+          
+        } else {
+    console.warn('⚠️ Gagal load PIC data dari Google Sheet, pakai fallback');
+    setFallbackPIC();
+    fillD1DropdownsFromSection();   // ganti dari syncD1FromSections()
+}
+        
+    } catch(e) {
+    console.error('❌ Error loading PIC data:', e);
+    setFallbackPIC();
+    fillD1DropdownsFromSection();   // ganti dari syncD1FromSections()
+}
+    
+    console.log('✅ loadPICData: FINISH');
+}
+
+function assignCurrentUserPIC() {
+  const username = currentUser ? currentUser.name.toLowerCase().trim() : 
+                   (localStorage.getItem('lastUser') || 'guest').toLowerCase().trim();
+  
+  const loggedInDisplay = document.getElementById('loggedInUsernameDisplay');
+  if (loggedInDisplay) loggedInDisplay.textContent = username;
+  
+  let foundRole = null;
+  let foundFullname = null;
+  
+  for (const [dKey, pic] of Object.entries(picDataMap)) {
+    if (pic.username.toLowerCase() === username) {
+      foundRole = dKey;
+      foundFullname = pic.fullname;
+      break;
+    }
+  }
+  
+  const d1El = document.getElementById('picD1');
+  const d2El = document.getElementById('picD2');
+  
+  if (foundRole) {
+    if (d1El) d1El.value = foundFullname;
+    if (d2El) d2El.value = foundFullname;
+  } else {
+    const loginName = currentUser ? currentUser.name : (localStorage.getItem('lastUser') || 'Guest');
+    if (d1El) d1El.value = loginName;
+    if (d2El) d2El.value = loginName;
+  }
+  
+  const infoEl = document.getElementById('userPICInfo');
+  const userRoleEl = document.getElementById('userPICRole');
+  
+  if (infoEl) {
+    infoEl.style.display = 'block';
+  }
+  
+  if (userRoleEl) {
+    if (foundRole) {
+      userRoleEl.textContent = `${foundRole} (${foundFullname}) - D1 & D2`;
+    } else {
+      userRoleEl.textContent = `⚠️ Login sebagai: ${username} (D1 & D2 diisi manual)`;
+    }
+  }
+  
+  if (infoEl) {
+    infoEl.className = foundRole ? 'alert alert-success py-1 mb-2 small' : 'alert alert-warning py-1 mb-2 small';
+  }
+}
+  
+ 
+function setFallbackPIC() {
+  const username = currentUser ? currentUser.name : (localStorage.getItem('lastUser') || 'Guest');
+  
+  // Coba cari di picDataMap dulu
+  if (picDataMap && Object.keys(picDataMap).length > 0) {
+    assignCurrentUserPIC();
+    return;
+  }
+  
+  // ==========================================
+  // PERUBAHAN: D1 dan D2 SAMA (username login)
+  // ==========================================
+  document.getElementById('picD1').value = username;
+  document.getElementById('picD2').value = username;
+  
+  const infoEl = document.getElementById('userPICInfo');
+  infoEl.style.display = 'block';
+  document.getElementById('loggedInUsernameDisplay').textContent = username;
+  document.getElementById('userPICRole').textContent = '⚠️ Menggunakan data lokal (fallback) - D1 & D2 = ' + username;
+  infoEl.className = 'alert alert-warning py-1 mb-2 small';
+}
+
+// ==========================================
+// 8. FUNGSI FOLLOW-UP (UPDATE D3-D8)
+// ==========================================
+function getFormDataByStep(step) {
+  const mapping = columnMapping[step];
+  if (!mapping) {
+    console.error('Step tidak ditemukan:', step);
+    return null;
+  }
+
+  const data = {};
+  for (const [fieldId, columnName] of Object.entries(mapping)) {
+    const element = document.getElementById(fieldId);
+    if (element) {
+      if (element.type === 'checkbox') {
+        data[fieldId] = element.checked ? 'Yes' : 'No';
+      } else {
+        data[fieldId] = element.value || '';
+      }
+    } else {
+      console.warn('Element tidak ditemukan:', fieldId);
+    }
+  }
+  return data;
+}
+
+async function submitFollowUp(step) {
+ // ✅ TAMBAHKAN INI DI PALING ATAS
+  if (currentUser?.isGuest) {
+    alert('⚠️ Guest tidak dapat melakukan perubahan data.');
+    return;
+  }
+  
+  // Validasi
+  if (!currentFollowUpId) {
+    alert('⚠️ Please select an NCR first!');
+    return;
+  }
+  
+  // Ambil data dari form
+  const formData = getFormDataByStep(step);
+  if (!formData) {
+    alert('❌ Error: Data form tidak ditemukan');
+    return;
+  }
+  
+  // Siapkan payload
+  const payload = {
+    action: 'updateNCR',
+    idNo: currentFollowUpId,
+    step: step,
+    data: formData,
+    timestamp: new Date().toISOString(),
+    updatedBy: currentUser ? currentUser.name : 'Guest'
+  };
+  
+  console.log(`📤 Submitting ${step}:`, payload);
+  
+  try {
+    // Kirim ke API
+    await fetch(API_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'text/plain' },  // Tetap text/plain untuk hindari preflight
+  body: JSON.stringify(payload)
+});
+    
+    alert(`✅ ${step} submitted successfully!`);
+    
+    // Update status lokal
+    const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+    if (ncr) {
+      if (step === 'D8') {
+        const status = document.getElementById('fuValRslt').value;
+        ncr.StatusNC = status === 'Closed' ? 'Closed' : 'In Progress';
+      } else {
+        ncr.StatusNC = 'In Progress';
+      }
+      renderDashboard(rawDataNCR);
+    }
+    
+    // Refresh data
+    await loadDashboardData();
+    
+  } catch(err) {
+    console.error(`❌ Error submitting ${step}:`, err);
+    alert(`❌ Failed to submit ${step}: ${err.message}`);
+  }
+}
+
+// ==========================================
+// 9. FUNGSI SUBMIT D3 - D8
+// ==========================================
+// ============================================================
+// FUNCTION: toggleD3Mode - DIPERBAIKI!
+// ============================================================
+// Mengikuti pola D4: Hanya mengunci field di D3 SECTION saja
+// ============================================================
+
+function toggleD3Mode(isEdit) {
+    console.log('🔄 toggleD3Mode:', isEdit ? 'EDIT MODE' : 'VIEW ONLY');
+    
+    // ===== 1. FIELD DI D3 SECTION =====
+    const fields = [
+        'fuInterimDate',
+        'fuInterimRemarks',
+        'fuTotalOK',
+        'fuQtyReject',
+        'fuManHours'
+    ];
+    
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.readOnly = !isEdit;
+            console.log(`  ${id}.readOnly = ${el.readOnly}`);
+        }
+    });
+    
+    // ===== 2. ❌ HAPUS PENGUNCI D1 DROPDOWN! =====
+    // Jangan sentuh fuPicD3 di D1!
+    // const picD3 = document.getElementById('fuPicD3');
+    // if (picD3) picD3.disabled = !isEdit;
+    
+    // ===== 3. UPDATE LABEL =====
+    const label = document.getElementById('labelD3Mode');
+    if (label) {
+        label.textContent = isEdit ? '✏️ EDIT MODE' : '👁️ VIEW ONLY';
+    }
+    
+    // ===== 4. TAMPILKAN/SEMBUNYIKAN TOMBOL SUBMIT =====
+    const btnSubmit = document.getElementById('btnSubmitD3');
+    if (btnSubmit) {
+        btnSubmit.style.display = isEdit ? 'inline-block' : 'none';
+    }
+    
+    // ===== 5. NOTICE BUTTON =====
+    const btnNotice = document.querySelector('[onclick="noticePICD3()"]');
+    if (btnNotice) {
+        btnNotice.style.display = isEdit ? 'inline-block' : 'inline-block';
+    }
+    
+    console.log('✅ toggleD3Mode FINISH');
+}
+
+ function toggleD4Mode(isEdit) {
+  const fields = ['fuRootCauseOcc','fuRootCauseSkip','fuRCFactor','fuRCAdate'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.readOnly = !isEdit;
+  });
+  const rcFactor = document.getElementById('fuRCFactor');
+  if (rcFactor) rcFactor.disabled = !isEdit;
+  
+  document.getElementById('labelD4Mode').textContent = isEdit ? 'EDIT MODE' : 'VIEW ONLY';
+  document.getElementById('btnSubmitD4').style.display = isEdit ? 'inline-block' : 'none';
+}
+
+function toggleD5Mode(isEdit) {
+  const fields = ['fuCAOcc','fuCASkip','fuCAdate'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.readOnly = !isEdit;
+  });
+  document.getElementById('labelD5Mode').textContent = isEdit ? 'EDIT MODE' : 'VIEW ONLY';
+  document.getElementById('btnSubmitD5').style.display = isEdit ? 'inline-block' : 'none';
+}
+
+function toggleD6Mode(isEdit) {
+  const fields = ['fuValOcc','fuValSkip','fuValDate','fuValRslt'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.readOnly = !isEdit;
+  });
+  const valRslt = document.getElementById('fuValRslt');
+  if (valRslt) valRslt.disabled = !isEdit;
+  
+  document.getElementById('labelD6Mode').textContent = isEdit ? 'EDIT MODE' : 'VIEW ONLY';
+  document.getElementById('btnSubmitD6').style.display = isEdit ? 'inline-block' : 'none';
+}
+
+function toggleD7Mode(isEdit) {
+  const fields = ['fuPAOcc','fuPASkip','fuPADate'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.readOnly = !isEdit;
+  });
+  document.getElementById('labelD7Mode').textContent = isEdit ? 'EDIT MODE' : 'VIEW ONLY';
+  document.getElementById('btnSubmitD7').style.display = isEdit ? 'inline-block' : 'none';
+}
+
+function toggleD8Mode(isEdit) {
+  const fields = ['fuCloseDate','fuCongMsg','fuStatusNC'];
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.readOnly = !isEdit;
+  });
+  const statusNC = document.getElementById('fuStatusNC');
+  if (statusNC) statusNC.disabled = !isEdit;
+  
+  document.getElementById('labelD8Mode').textContent = isEdit ? 'EDIT MODE' : 'VIEW ONLY';
+  document.getElementById('btnSubmitD8').style.display = isEdit ? 'inline-block' : 'none';
+}
+
+// ==========================================
+// Submit To all
+// ==========================================
+  
+function sendEmailtoAll() {
+  const picName = document.getElementById('fuPicD3').value;
+  if (!picName) { alert('⚠️ Pilih PIC D3 terlebih dahulu!'); return; }
+  
+  // 🔥 TAMBAHKAN INI — ambil data NCR yang sedang di-follow-up
+  const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+  if (!ncr) { alert('⚠️ Data NCR tidak ditemukan!'); return; }
+  
+  const idNo = currentFollowUpId || '-';
+  
+   // 🔥 AMBIL INFORMASI TAMBAHAN DARI NCR
+  const customerName = ncr?.CustomerName || '-';
+  const location = ncr?.DetectionLocation || '-';
+  const partNo = ncr?.PartNo || '-';
+  const ncMode = ncr?.NCMode || '-';
+  const ncCategory = ncr?.NCCatagory || '-';
+  const detailNC = ncr?.DetailNC || '-';
+  const issuedBy = ncr?.IssuedBy || '-';
+  const issuedDate = formatDateDisplay(ncr?.IssuedDate); // ✅ FORMAT TANGGAL
+  const D3PIC = ncr?.InterimActBy ||'-';
+  const D4PIC = ncr?.['RC-AnalysisBy'] || '-'; 
+  // 🔥 AMBIL URL GAMBAR (jika ada)
+  const photoUrl = ncr?.NCPicture || '';
+  
+  // 🔥 TO LIST
+  const toList = [
+'Rudi Hermawan <Rudi.Hermawan@volex.com>' , 
+'Hendro Sianipar <Hendro.Sianipar@volex.com>' , 
+'Daniel Sihombing <Daniel.Sihombing@volex.com>' , 
+'Usman Timunk <Usman.Timunk@volex.com>' , 
+'Fekky Rotty <Fekky.Rotty@volex.com>' , 
+'Rifki Wijaya <Rifki.Wijaya@volex.com>' , 
+'Ahmad Gusfanri <ahmad.gusfanri@volex.com>', 
+'Wantri Manurung <wantri.manurung@volex.com>' , 
+'Junianto Nainggolan <Junianto.Nainggolan@volex.com>' , 
+'Hafizh Mahendra <hafizh.mahendra@volex.com>' , 
+'Ainul Syawal <ainul.syawal@volex.com>' , 
+'Sulanto Sula <Sulanto.Sula@volex.com>' , 
+'Jos Sudarso <jos.sudarso@volex.com>' , 
+'Bigsanro Banjarnahor <Bigsanro.Banjarnahor@volex.com>' , 
+'Elpi Hotriani <Elpi.Hotriani@volex.com>' , 
+'Henriko Sitanggang <Henriko.Sitanggang@volex.com>' , 
+'Harjo Hutabarat <Harjo.Hutabarat@volex.com>' , 
+'Ravi Hariska <ravi.hariska@volex.com>' , 
+'Rikardo Rumapea <rikardo.rumapea@volex.com>' , 
+'Toni Sugiarto <Toni.Sugiarto@volex.com>' , 
+'Musthafa Ramadhan <musthafa.ramadhan@volex.com>' , 
+'Iwan Padli  <iwan.padli@volex.com>' , 
+'Adrian Saputra <adrian.saputra@volex.com>',
+'Zulherry Yusuf <Zulherry.Yusuf@volex.com>',
+'Desi Purnamasari <desi.purnamasari@volex.com>', 
+'Suryo Wahono <suryo.wahono@volex.com>',
+'Fitriani Fitri <Fitriani.Fitri@volex.com>',
+'Meirany Sianturi <Meirany.Sianturi@volex.com>',
+'Azrin Krih <Azrin.Krih@volex.com>',
+'Batman Lubis <batman.lubis@volex.com>',
+'Hidir Muhammad <hidir.muhammad@volex.com>',
+'Sri Sulastri <Sri.Sulastri@volex.com>',
+'Denny Mulyady <Denny.Mulyady@volex.com>'
+
+  ].join(';');
+  
+  // 🔥 CC LIST
+  const ccList = [
+    'Firdaus Fauzi <Firdaus.Fauzi@volex.com>',
+    'Muhammad Ridwan <muhammad.ridwan@volex.com>',
+    'Manorgang Purba <Manorgang.Purba@volex.com>',
+    'Fara Rezki <Fara.Rezki@volex.com>',
+    'Rima Melati <Rima.Melati@volex.com>',
+    'Rifki Jaswir <rifki.jaswir@volex.com',
+    'Hasril Fz <Hasril.Fz@volex.com>',
+    'Yusrizal Iskandar <Yusrizal.Iskandar@volex.com>',
+    'Panal Sihombing <panal.sihombing@volex.com>',
+    'Maha Kurniawanto <Maha.Kurniawanto@volex.com>',
+    'Dessy Windasyari <Dessy.Windasyari@volex.com>',
+    'Ana Karolina <Ana.Karolina@volex.com>',
+    'Emilia Fatmi <Emilia.Fatmi@volex.com>',
+    'Agustina Sirait <Agustina.Sirait@volex.com>',
+    'Ayuly Elizabeth <ayuly.elizabeth@volex.com>',
+    'Zulkarnain Zul <Zulkarnain.Zul@volex.com>',
+    'Santo Arenzo <Santo.Arenzo@volex.com>'
+    
+  ].join(';');
+
+  
+  const body = encodeURIComponent(
+ `Dear All,
+
+There is an NC with number: ${idNo}.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 NCR DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- ID No.        : ${idNo}
+- Issued By     : ${issuedBy}
+- Issued Date   : ${issuedDate}
+- Customer Name : ${customerName}
+- Part No/Name  : ${partNo}
+- Location/Area : ${location}
+- NC Mode       : ${ncMode}
+- NC Category   : ${ncCategory}
+- Detail NC     : ${detailNC}
+- NC Photo URL  : ${photoUrl}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For the all PIC team, please complete and follow-up the required action to prevent the recurrence issue.
+
+Hi ${D3PIC} & ${D4PIC}, 
+Please conduct the Interim/Containment Action immediately (within 24 hours) & Root Cause Analysis 
+
+Please open the NCR portal by clicking THIS LINK:
+https://yusrinalzi.github.io/Internal-NC-Report/
+
+Use your User Name and ID to login or contact QMS team for access.
+
+Thank you.` );
+
+  const subject = encodeURIComponent(`[Action Required] NCR ${idNo}`);
+  
+  window.open(
+    `mailto:${encodeURIComponent(toList)}?cc=${encodeURIComponent(ccList)}&subject=${subject}&body=${body}`,
+    '_blank'
+  );
+}
+
+  
+  
+// ==========================================
+// NOTICE PIC D3 - D8
+// ==========================================
+function noticePICD3() {
+  const picName = document.getElementById('fuPicD3').value;
+  if (!picName) { alert('⚠️ Pilih PIC D3 terlebih dahulu!'); return; }
+  
+  const auditor = auditorList.find(a => a.AuditorName === picName);
+  const email = auditor?.Email || '';
+  const email2 = auditor?.Email2 || '';
+  const N1Email = auditor?.['N+1Email'] || '';
+  const QMS1Email = auditor?.qms1 || '';
+  const QMS2Email = auditor?.qms2 || '';
+  const QAEngEmail = auditor?.QAEng || '';
+  
+  if (!email) {
+    alert(`⚠️ Email untuk ${picName} tidak ditemukan di NameList.`);
+    return;
+  }
+  
+  const cc = [email2, N1Email, QMS1Email, QMS2Email, QAEngEmail]
+    .filter(e => e && e.trim() !== '')
+    .join(';');
+  
+  const idNo = currentFollowUpId || '-';
+  const subject = encodeURIComponent(`[Action Required] D3 Interim Action - NCR ${idNo}`);
+  const body = encodeURIComponent(
+    `Dear ${picName},\n\nAnda ditugaskan sebagai PIC D3 (Interim/Containment Action) untuk NCR ID: ${idNo}.\n\nMohon segera lakukan tindakan interim dan update di Internal NCR sistem.\n\nhttps://yusrinalzi.github.io/Internal-NC-Report/\n\nGunakan User Name dan Id anda untuk login.\n\nTerima kasih.`
+  );
+
+  // ✅ CC di-encode, struktur URL lebih bersih
+  const ccPart = cc ? `cc=${encodeURIComponent(cc)}&` : '';
+  window.open(`mailto:${email}?${ccPart}subject=${subject}&body=${body}`, '_blank');
+}
+
+// ==========================================
+// NOTICE PIC D4
+// ==========================================
+function noticePICD4() {
+  const picName = document.getElementById('fuPicD4Select').value;
+  if (!picName) { alert('⚠️ Pilih PIC D4 terlebih dahulu!'); return; }
+  
+  const auditor = auditorList.find(a => a.AuditorName === picName);
+  const email = auditor?.Email || '';
+  const email2 = auditor?.Email2 || '';
+  const N1Email = auditor?.['N+1Email'] || '';
+  const QMS1Email = auditor?.qms1 || '';
+  const QMS2Email = auditor?.qms2 || '';
+  const QAEngEmail = auditor?.QAEng || '';
+  
+  if (!email) {
+    alert(`⚠️ Email untuk ${picName} tidak ditemukan di NameList.`);
+    return;
+  }
+  
+  const cc = [email2, N1Email, QMS1Email, QMS2Email, QAEngEmail]
+    .filter(e => e && e.trim() !== '')
+    .join(';');
+  
+  const idNo = currentFollowUpId || '-';
+  const subject = encodeURIComponent(`[Action Required] D4 Root Cause Analysis - NCR ${idNo}`);
+  const body = encodeURIComponent(
+    `Dear ${picName},\n\nAnda ditugaskan sebagai PIC D4 (Root Cause Analysis) untuk NCR ID: ${idNo}.\n\nMohon segera lakukan analisis root cause dan update di Internal NCR sistem.\n\nhttps://yusrinalzi.github.io/Internal-NC-Report/\n\nGunakan User Name dan Id anda untuk login.\n\nTerima kasih.`
+  );
+
+  const ccPart = cc ? `cc=${encodeURIComponent(cc)}&` : '';
+  window.open(`mailto:${email}?${ccPart}subject=${subject}&body=${body}`, '_blank');
+}
+
+// ==========================================
+// NOTICE PIC D5
+// ==========================================
+function noticePICD5() {
+  const picName = document.getElementById('fuPicD5Select').value;
+  if (!picName) { alert('⚠️ Pilih PIC D5 terlebih dahulu!'); return; }
+  
+  const auditor = auditorList.find(a => a.AuditorName === picName);
+  const email = auditor?.Email || '';
+  const email2 = auditor?.Email2 || '';
+  const N1Email = auditor?.['N+1Email'] || '';
+  const QMS1Email = auditor?.qms1 || '';
+  const QMS2Email = auditor?.qms2 || '';
+  const QAEngEmail = auditor?.QAEng || '';
+  
+  if (!email) {
+    alert(`⚠️ Email untuk ${picName} tidak ditemukan di NameList.`);
+    return;
+  }
+  
+  const cc = [email2, N1Email, QMS1Email, QMS2Email, QAEngEmail]
+    .filter(e => e && e.trim() !== '')
+    .join(';');
+  
+  const idNo = currentFollowUpId || '-';
+  const subject = encodeURIComponent(`[Action Required] D5 Corrective Action - NCR ${idNo}`);
+  const body = encodeURIComponent(
+    `Dear ${picName},\n\nAnda ditugaskan sebagai PIC D5 (Corrective Action) untuk NCR ID: ${idNo}.\n\nMohon segera lakukan tindakan korektif dan update di Internal NCR sistem.\n\nhttps://yusrinalzi.github.io/Internal-NC-Report/\n\nGunakan User Name dan Id anda untuk login.\n\nTerima kasih.`
+  );
+
+  const ccPart = cc ? `cc=${encodeURIComponent(cc)}&` : '';
+  window.open(`mailto:${email}?${ccPart}subject=${subject}&body=${body}`, '_blank');
+}
+
+// ==========================================
+// NOTICE PIC D6
+// ==========================================
+function noticePICD6() {
+  const picName = document.getElementById('fuPicD6Select').value;
+  if (!picName) { alert('⚠️ Pilih PIC D6 terlebih dahulu!'); return; }
+  
+  const auditor = auditorList.find(a => a.AuditorName === picName);
+  const email = auditor?.Email || '';
+  const email2 = auditor?.Email2 || '';
+  const N1Email = auditor?.['N+1Email'] || '';
+  const QMS1Email = auditor?.qms1 || '';
+  const QMS2Email = auditor?.qms2 || '';
+  const QAEngEmail = auditor?.QAEng || '';
+  
+  if (!email) {
+    alert(`⚠️ Email untuk ${picName} tidak ditemukan di NameList.`);
+    return;
+  }
+  
+  const cc = [email2, N1Email, QMS1Email, QMS2Email, QAEngEmail]
+    .filter(e => e && e.trim() !== '')
+    .join(';');
+  
+  const idNo = currentFollowUpId || '-';
+  const subject = encodeURIComponent(`[Action Required] D6 Verify Corrective Action - NCR ${idNo}`);
+  const body = encodeURIComponent(
+    `Dear ${picName},\n\nAnda ditugaskan sebagai PIC D6 (Verify Corrective Action) untuk NCR ID: ${idNo}.\n\nMohon segera lakukan verifikasi dan update di Internal NCR sistem.\n\nhttps://yusrinalzi.github.io/Internal-NC-Report/\n\nGunakan User Name dan Id anda untuk login.\n\nTerima kasih.`
+  );
+
+  const ccPart = cc ? `cc=${encodeURIComponent(cc)}&` : '';
+  window.open(`mailto:${email}?${ccPart}subject=${subject}&body=${body}`, '_blank');
+}
+
+// ==========================================
+// NOTICE PIC D7
+// ==========================================
+function noticePICD7() {
+  const picName = document.getElementById('fuPicD7Select').value;
+  if (!picName) { alert('⚠️ Pilih PIC D7 terlebih dahulu!'); return; }
+  
+  const auditor = auditorList.find(a => a.AuditorName === picName);
+  const email = auditor?.Email || '';
+  const email2 = auditor?.Email2 || '';
+  const N1Email = auditor?.['N+1Email'] || '';
+  const QMS1Email = auditor?.qms1 || '';
+  const QMS2Email = auditor?.qms2 || '';
+  const QAEngEmail = auditor?.QAEng || '';
+  
+  if (!email) {
+    alert(`⚠️ Email untuk ${picName} tidak ditemukan di NameList.`);
+    return;
+  }
+  
+  const cc = [email2, N1Email, QMS1Email, QMS2Email, QAEngEmail]
+    .filter(e => e && e.trim() !== '')
+    .join(';');
+  
+  const idNo = currentFollowUpId || '-';
+  const subject = encodeURIComponent(`[Action Required] D7 Preventive Action - NCR ${idNo}`);
+  const body = encodeURIComponent(
+    `Dear ${picName},\n\nAnda ditugaskan sebagai PIC D7 (Preventive Action) untuk NCR ID: ${idNo}.\n\nMohon segera lakukan tindakan pencegahan dan update di Internal NCR sistem.\n\nhttps://yusrinalzi.github.io/Internal-NC-Report/\n\nGunakan User Name dan Id anda untuk login.\n\nTerima kasih.`
+  );
+
+  const ccPart = cc ? `cc=${encodeURIComponent(cc)}&` : '';
+  window.open(`mailto:${email}?${ccPart}subject=${subject}&body=${body}`, '_blank');
+}
+
+// ==========================================
+// NOTICE PIC D8
+// ==========================================
+function noticePICD8() {
+  const picName = document.getElementById('fuPicD8Select').value;
+  if (!picName) { alert('⚠️ Pilih PIC D8 terlebih dahulu!'); return; }
+  
+  const auditor = auditorList.find(a => a.AuditorName === picName);
+  const email = auditor?.Email || '';
+  const email2 = auditor?.Email2 || '';
+  const N1Email = auditor?.['N+1Email'] || '';
+  const QMS1Email = auditor?.qms1 || '';
+  const QMS2Email = auditor?.qms2 || '';
+  const QAEngEmail = auditor?.QAEng || '';
+  
+  if (!email) {
+    alert(`⚠️ Email untuk ${picName} tidak ditemukan di NameList.`);
+    return;
+  }
+  
+  const cc = [email2, N1Email, QMS1Email, QMS2Email, QAEngEmail]
+    .filter(e => e && e.trim() !== '')
+    .join(';');
+  
+  const idNo = currentFollowUpId || '-';
+  const subject = encodeURIComponent(`[Action Required] D8 Closure & Validation - NCR ${idNo}`);
+  const body = encodeURIComponent(
+    `Dear ${picName},\n\nAnda ditugaskan sebagai PIC D8 (Approval/Closure) untuk NCR ID: ${idNo}.\n\nMohon segera lakukan review dan approval di Internal NCR sistem.\n\nhttps://yusrinalzi.github.io/Internal-NC-Report/\n\nGunakan User Name dan Id anda untuk login.\n\nTerima kasih.`
+  );
+
+  const ccPart = cc ? `cc=${encodeURIComponent(cc)}&` : '';
+  window.open(`mailto:${email}?${ccPart}subject=${subject}&body=${body}`, '_blank');
+}
+
+
+  // Submit D3 dengan loading spinner
+async function submitD3() {
+  toggleButtonSpinner('btnSubmitD3', true);
+  await submitFollowUp('D3');
+  toggleButtonSpinner('btnSubmitD3', false);
+   document.getElementById('toggleD3Edit').checked = false;
+  toggleD3Mode(false);
+}
+  
+// Set D3 default ke VIEW ONLY
+document.getElementById('toggleD3Edit').checked = false;
+toggleD3Mode(false);
+  
+
+async function submitD4() {
+  toggleButtonSpinner('btnSubmitD4', true);
+  await submitFollowUp('D4');
+  toggleButtonSpinner('btnSubmitD4', false);
+   document.getElementById('toggleD4Edit').checked = false;
+  toggleD4Mode(false);
+}
+
+async function submitD5() {
+  toggleButtonSpinner('btnSubmitD5', true);
+  await submitFollowUp('D5');
+  toggleButtonSpinner('btnSubmitD5', false);
+   document.getElementById('toggleD5Edit').checked = false;
+  toggleD5Mode(false);
+}
+
+async function submitD6() {
+  toggleButtonSpinner('btnSubmitD6', true);
+  await submitFollowUp('D6');
+  toggleButtonSpinner('btnSubmitD6', false);
+   document.getElementById('toggleD6Edit').checked = false;
+  toggleD6Mode(false);
+}
+
+async function submitD7() {
+  toggleButtonSpinner('btnSubmitD7', true);
+  await submitFollowUp('D7');
+  toggleButtonSpinner('btnSubmitD7', false);
+   document.getElementById('toggleD7Edit').checked = false;
+  toggleD7Mode(false);
+}
+
+async function submitD8() {
+  toggleButtonSpinner('btnSubmitD8', true);
+  await submitFollowUp('D8');
+  toggleButtonSpinner('btnSubmitD8', false);
+   document.getElementById('toggleD8Edit').checked = false;
+  toggleD8Mode(false);
+}
+
+// ==========================================
+// 10. FUNGSI CHARTS
+// ==========================================
+let trendChartInstance = null;
+let paretoChartInstance = null;
+
+function initCharts(data) {
+  if (trendChartInstance) trendChartInstance.destroy();
+  if (paretoChartInstance) paretoChartInstance.destroy();
+
+  // TREND CHART
+  const monthlyData = {};
+  data.forEach(item => {
+    if (item.IssuedDate) {
+      let date = parseDate(item.IssuedDate);
+      if (date) {
+        const monthYear = date.toLocaleString('default', { month: 'short' }) + ' ' + date.getFullYear();
+        const ncrType = item.Type || 'PDR';
+        if (!monthlyData[monthYear]) monthlyData[monthYear] = { PDR: 0, NCMR: 0, '8D': 0, dateObj: date };
+        if (monthlyData[monthYear][ncrType] !== undefined) monthlyData[monthYear][ncrType]++;
+        else monthlyData[monthYear]['PDR']++;
+      }
+    }
+  });
+
+  const sortedMonths = Object.keys(monthlyData)
+    .sort((a, b) => monthlyData[a].dateObj - monthlyData[b].dateObj)
+    .slice(-6);
+
+  const pdrData = sortedMonths.map(m => monthlyData[m].PDR);
+  const ncmrData = sortedMonths.map(m => monthlyData[m].NCMR);
+  const eightDData = sortedMonths.map(m => monthlyData[m]['8D']);
+
+  trendChartInstance = new Chart(document.getElementById('trendChart'), {
+    type: 'bar',
+    data: {
+      labels: sortedMonths.length ? sortedMonths : ['No Data'],
+      datasets: [
+        { label:'PDR', data: sortedMonths.length ? pdrData : [0], backgroundColor:'#378ADD', borderRadius:4, borderSkipped:false },
+        { label:'NCMR', data: sortedMonths.length ? ncmrData : [0], backgroundColor:'#639922', borderRadius:4, borderSkipped:false },
+        { label:'8D', data: sortedMonths.length ? eightDData : [0], backgroundColor:'#7F77DD', borderRadius:4, borderSkipped:false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode:'index', intersect:false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font:{size:11}, color:'#888', autoSkip: false, maxRotation: 35 } },
+        y: { beginAtZero: true, grid: { color:'rgba(0,0,0,0.06)' }, ticks: { precision:0, font:{size:11}, color:'#888' } }
+      }
+    }
+  });
+
+  // PARETO CHART
+  const defectCounts = {};
+  data.forEach(item => {
+    let defect = item.NCCatagory || item.NCCategory || 'Others';
+    if (defect === 'Reject Hi pot Test') defect = 'Reject Hi-pot';
+    if (defect === 'Dimension Out of Specification') defect = 'Dimension OoS';
+    if (defect === 'Wrong Do Assembly/Process') defect = 'Wrong Assembly';
+    if (defect === 'Product Damage/Broken') defect = 'Product Damage';
+    if (defect === 'Not Follow WI/Procedure') defect = 'Not Follow WI';
+    defectCounts[defect] = (defectCounts[defect] || 0) + 1;
+  });
+
+  const sortedDefects = Object.entries(defectCounts).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const labels = sortedDefects.map(([name]) => name);
+  const frequencies = sortedDefects.map(([,count]) => count);
+  const total = frequencies.reduce((a,b) => a+b, 0) || 1;
+  const cumPct = frequencies.reduce((acc, v, i) => {
+    const prev = i === 0 ? 0 : acc[i-1];
+    acc.push(Math.round((prev + v/total*100)*10)/10);
+    return acc;
+  }, []);
+
+  paretoChartInstance = new Chart(document.getElementById('paretoChart'), {
+    type: 'bar',
+    data: {
+      labels: labels.length ? labels : ['No Data'],
+      datasets: [
+        { type:'bar', label:'Frekuensi', data: labels.length ? frequencies : [0], backgroundColor:'#EF9F27', borderRadius:4, borderSkipped:false, yAxisID:'y' },
+        { type:'line', label:'Kumulatif %', data: labels.length ? cumPct : [0], borderColor:'#A32D2D', borderDash:[5,3], borderWidth:2, pointBackgroundColor:'#A32D2D', pointRadius:3, fill:false, tension:0, yAxisID:'y2' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode:'index', intersect:false } },
+      scales: {
+        x: { grid:{ display:false }, ticks:{ font:{size:10}, color:'#888', maxRotation:35, autoSkip:false } },
+        y: { beginAtZero:true, grid:{ color:'rgba(0,0,0,0.06)' }, ticks:{ precision:0, font:{size:11}, color:'#888' } },
+        y2: { position:'right', min:0, max:100, grid:{ display:false }, ticks:{ callback: v => v+'%', font:{size:11}, color:'#888' } }
+      }
+    }
+  });
+}
+
+function parseDate(dateStr) {
+  if (!dateStr) return null;
+  if (typeof dateStr === 'string' && dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3 && parts[0].length <= 2 && parts[1].length <= 2) {
+      return new Date(`${parts[1]}/${parts[0]}/${parts[2]}`);
+    }
+  }
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? null : date;
+}
+
+// ==========================================
+// FUNGSI FOLLOW-UP: ASSIGN D1 & D2
+// ==========================================
+function assignFollowUpPIC() {
+  // Ambil data NCR yang sedang di-follow-up
+  const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+  
+  // D1 dan D2 = IssuedBy dari Google Sheet
+  const issuedBy = ncr?.IssuedBy || '';
+  
+  // Jika IssuedBy kosong, fallback ke username login
+  const value = issuedBy || currentUser?.name || (localStorage.getItem('lastUser') || 'Guest');
+  
+  // Isi D1 dan D2
+  const d1El = document.getElementById('fuPicD1');
+  const d2El = document.getElementById('fuPicD2');
+  
+  if (d1El) d1El.value = value;
+  if (d2El) d2El.value = value;
+}
+
+  // ==========================================
+// FUNGSI TOGGLE SPINNER UNTUK TOMBOL
+// ==========================================
+
+function toggleButtonSpinner(buttonId, show) {
+  const btn = document.getElementById(buttonId);
+  if (!btn) {
+    console.warn('⚠️ Button not found:', buttonId);
+    return;
+  }
+  
+  const textEl = document.getElementById(buttonId + 'Text');
+  const spinnerEl = document.getElementById(buttonId + 'Spinner');
+  
+  if (show) {
+    // Disable tombol
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    
+    // Sembunyikan teks
+    if (textEl) textEl.style.display = 'none';
+    
+    // Tampilkan spinner
+    if (spinnerEl) spinnerEl.classList.add('active');
+  } else {
+    // Enable tombol
+    btn.classList.remove('btn-loading');
+    btn.disabled = false;
+    
+    // Tampilkan teks
+    if (textEl) textEl.style.display = 'inline';
+    
+    // Sembunyikan spinner
+    if (spinnerEl) spinnerEl.classList.remove('active');
+  }
+}
+// ==========================================
+// FUNGSI FOLLOW-UP: UPDATE PIC (D1-D8)
+// ==========================================
+  
+async function updatePIC() {
+
+  // ✅ TAMBAHKAN INI DI PALING ATAS
+  if (currentUser?.isGuest) {
+    alert('⚠️ Guest tidak dapat melakukan perubahan data.');
+    return;
+  }
+ 
+  if (!currentFollowUpId) {
+    alert('⚠️ Please select an NCR first!');
+    return;
+  }
+  
+  const picData = {
+  D1: document.getElementById('fuPicD1').value,
+  D2: document.getElementById('fuPicD2').value,
+  D3: document.getElementById('fuPicD3').value,
+  D4: document.getElementById('fuPicD4Select')?.value || document.getElementById('fuPicD4').value,
+  D5: document.getElementById('fuPicD5Select')?.value || document.getElementById('fuPicD5').value,
+  D6: document.getElementById('fuPicD6Select')?.value || document.getElementById('fuPicD6').value,
+  D7: document.getElementById('fuPicD7Select')?.value || document.getElementById('fuPicD7').value,
+  D8: document.getElementById('fuPicD8Select')?.value || document.getElementById('fuPicD8').value,
+};
+  
+  if (!picData.D1 || !picData.D2) {
+    alert('⚠️ D1 and D2 must be filled!');
+    return;
+  }
+  
+  toggleButtonSpinner('btnUpdatePIC', true);
+  
+  const payload = {
+    action: 'updatePIC',
+    idNo: currentFollowUpId,
+    data: picData,
+    timestamp: new Date().toISOString(),
+    updatedBy: currentUser ? currentUser.name : 'Guest'
+  };
+  
+  try {
+    await fetch(API_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'text/plain' },  // Tetap text/plain untuk hindari preflight
+  body: JSON.stringify(payload)
+});
+    
+    toggleButtonSpinner('btnUpdatePIC', false);
+    alert('✅ PIC Updated Successfully!');
+    
+    showLoadingOverlay('Refreshing data from Google Sheet...');
+    await loadDashboardData();
+    await loadPICData();
+    
+    const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+if (ncr) {
+  // 🔥 Cuma fetch ulang kalau auditorList BELUM ada (hindari panggilan boros)
+if (!auditorList || auditorList.length === 0) {
+  await loadAuditors();
+} else {
+  fillAuditorDropdowns(auditorList);  // pakai data yang sudah ada, tanpa fetch baru
+}
+ 
+  loadNCRViewData(ncr);
+  assignFollowUpPIC();
+  fillD1DropdownsFromSection();
+}
+    
+    hideLoadingOverlay();
+    
+  } catch(err) {
+    console.error('❌ Error updating PIC:', err);
+    toggleButtonSpinner('btnUpdatePIC', false);
+    hideLoadingOverlay();
+    alert('❌ Failed to update PIC: ' + err.message);
+  }
+}
+
+// ============================================================
+// FUNCTION: loadNCRViewData
+// ============================================================
+// Fungsi ini mengisi semua data di halaman Follow-up
+// Berdasarkan data dari Google Sheet (ncr)
+// ============================================================
+
+function loadNCRViewData(ncr) {
+    // Cek apakah data ncr ada
+    if (!ncr) {
+        console.warn('⚠️ loadNCRViewData: ncr is null or undefined');
+        return;
+    }
+    
+    console.log('📋 loadNCRViewData dipanggil untuk ID:', ncr['ID No.']);
+    
+    // ============================================================
+    // BAGIAN 1: D2 - NON-CONFORMITY REPORT (VIEW ONLY)
+    // ============================================================
+    // Semua field di D2 diisi langsung dari Google Sheet
+    
+    document.getElementById('fuViewIssuedBy').value = ncr.IssuedBy || '-';
+    document.getElementById('fuViewIssuedDate').value = formatDateDisplay(ncr.IssuedDate) || '-';
+    document.getElementById('fuViewIdNo').value = ncr['ID No.'] || '-';
+    document.getElementById('fuViewType').value = ncr.Type || '-';
+    document.getElementById('fuViewCategory').value = ncr.Category || '-';
+    document.getElementById('fuViewShiftTime').value = ncr.ShiftTime || '-';
+    document.getElementById('fuViewPartNo').value = ncr.PartNo || '-';
+    document.getElementById('fuViewCustomerName').value = ncr.CustomerName || '-';
+    document.getElementById('fuViewLocation').value = ncr.DetectionLocation || '-';
+    document.getElementById('fuViewAffectedQty').value = ncr.AffectedQty || '-';
+    document.getElementById('fuViewSampleQty').value = ncr.SamplingQty || '-';
+    document.getElementById('fuViewNcQty').value = ncr.RejectQtyDeclated || '-';
+    document.getElementById('fuViewNcMode').value = ncr.NCMode || '-';
+    document.getElementById('fuViewNcCategory').value = ncr.NCCatagory || '-';
+    document.getElementById('fuViewDetailNC').value = ncr.DetailNC || '-';
+    document.getElementById('fuViewHowDetected').value = ncr.HowItDetected || '-';
+    document.getElementById('fuViewInterimAct').value = ncr.InterimAction || '-';
+    document.getElementById('fuViewSortingRequired').value = ncr.SortingRepairReworkRequired || '-';
+    document.getElementById('fuViewSortingPIC').value = ncr.SortingReworkPIC || '-';
+
+ // ===== 🔥 FORCE REFRESH SECTION DISPLAY =====
+    // Trigger change event pada section agar UI update
+    const sections = ['fuInterimActBy', 'fuPicD4', 'fuPicD5', 'fuPicD6', 'fuPicD7', 'fuPicD8'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.value) {
+            const event = new Event('change', { bubbles: true });
+            el.dispatchEvent(event);
+        }
+    });
+
+  
+    // ============================================================
+    // BAGIAN 2: FOTO NON-CONFORMITY
+    // ============================================================
+    // Tampilkan foto jika ada URL, atau tampilkan placeholder
+    
+    const photoUrl = ncr.NCPicture || '';
+    const display = document.getElementById('fuPhotoDisplay');
+    const placeholder = document.getElementById('fuPhotoPlaceholder');
+    
+    if (photoUrl && photoUrl.startsWith('http')) {
+        // Ada foto - tampilkan
+        if (display) {
+            display.src = photoUrl;
+            display.style.display = 'block';
+            display.onerror = function() {
+                // Jika gagal load, tampilkan placeholder
+                this.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'flex';
+            };
+        }
+        if (placeholder) placeholder.style.display = 'none';
+    } else {
+        // Tidak ada foto - tampilkan placeholder
+        if (display) {
+            display.style.display = 'none';
+            display.src = '#';
+        }
+        if (placeholder) placeholder.style.display = 'flex';
+    }
+
+  // 🔥 BARU: Tampilkan foto Good Sample (OKPicture)
+const photoUrlGood = ncr.OKPicture || '';
+const displayGood = document.getElementById('fuPhotoGoodDisplay');
+const placeholderGood = document.getElementById('fuPhotoGoodPlaceholder');
+
+if (photoUrlGood && photoUrlGood.startsWith('http')) {
+    if (displayGood) {
+        displayGood.src = photoUrlGood;
+        displayGood.style.display = 'block';
+        displayGood.onerror = function() {
+            this.style.display = 'none';
+            if (placeholderGood) placeholderGood.style.display = 'flex';
+        };
+    }
+    if (placeholderGood) placeholderGood.style.display = 'none';
+} else {
+    if (displayGood) {
+        displayGood.style.display = 'none';
+        displayGood.src = '#';
+    }
+    if (placeholderGood) placeholderGood.style.display = 'flex';
+}
+  
+    // ============================================================
+    // BAGIAN 3: D3 - INTERIM/CONTAINMENT ACTION
+    // ============================================================
+    // Field-field di D3 diisi langsung dari Google Sheet
+    
+    const d3DateEl = document.getElementById('fuInterimDate');
+    if (d3DateEl) {
+        d3DateEl.value = formatDateForInput(ncr['InterimActionDate']) 
+                       || new Date().toISOString().split('T')[0];
+    }
+    
+    const d3Remarks = document.getElementById('fuInterimRemarks');
+    if (d3Remarks) d3Remarks.value = ncr['InterimRemarks'] || '';
+    
+    const fuTotalOK = document.getElementById('fuTotalOK');
+    if (fuTotalOK) fuTotalOK.value = ncr['TotalOK'] || '0';
+    
+    const fuQtyReject = document.getElementById('fuQtyReject');
+    if (fuQtyReject) fuQtyReject.value = ncr['FinalRejectQty'] || '0';
+    
+    const fuManHours = document.getElementById('fuManHours');
+    if (fuManHours) fuManHours.value = ncr['TotalManHour'] || '0';
+
+    // ============================================================
+    // BAGIAN 4: D4 - ROOT CAUSE ANALYSIS
+    // ============================================================
+    // Field-field di D4 diisi langsung dari Google Sheet
+    
+    const fuRootCauseOcc = document.getElementById('fuRootCauseOcc');
+    if (fuRootCauseOcc) fuRootCauseOcc.value = ncr['RootCauseOcc'] || '';
+    
+    const fuRootCauseSkip = document.getElementById('fuRootCauseSkip');
+    if (fuRootCauseSkip) fuRootCauseSkip.value = ncr['RootCause(Escape)'] || '';
+    
+    const fuRCFactor = document.getElementById('fuRCFactor');
+    if (fuRCFactor) fuRCFactor.value = ncr['5M1E-Factor'] || '';
+    
+    const fuRCAdate = document.getElementById('fuRCAdate');
+    if (fuRCAdate) fuRCAdate.value = formatDateForInput(ncr['RC-AnalysisDate']);
+
+    // ============================================================
+    // BAGIAN 5: D5 - CORRECTIVE ACTION
+    // ============================================================
+    // Field-field di D5 diisi langsung dari Google Sheet
+    
+    const fuCAOcc = document.getElementById('fuCAOcc');
+    if (fuCAOcc) fuCAOcc.value = ncr['CorrectiveActOccur'] || '';
+    
+    const fuCASkip = document.getElementById('fuCASkip');
+    if (fuCASkip) fuCASkip.value = ncr['CorrectiveActSkip'] || '';
+    
+    const fuCAdate = document.getElementById('fuCAdate');
+    if (fuCAdate) fuCAdate.value = formatDateForInput(ncr['CADate']);
+
+    // ============================================================
+    // BAGIAN 6: D6 - VERIFY CORRECTIVE ACTION
+    // ============================================================
+    // Field-field di D6 diisi langsung dari Google Sheet
+    
+    const fuValOcc = document.getElementById('fuValOcc');
+    if (fuValOcc) fuValOcc.value = ncr['ValidationCAOcc'] || '';
+    
+    const fuValSkip = document.getElementById('fuValSkip');
+    if (fuValSkip) fuValSkip.value = ncr['ValidationCASkip'] || '';
+    
+    const fuValDate = document.getElementById('fuValDate');
+    if (fuValDate) fuValDate.value = formatDateForInput(ncr['ValidateCAPADate']);
+    
+    const fuValRslt = document.getElementById('fuValRslt');
+    if (fuValRslt) fuValRslt.value = ncr['ValidationResult'] || '';
+
+    // ============================================================
+    // BAGIAN 7: D7 - PREVENTIVE ACTION
+    // ============================================================
+    // Field-field di D7 diisi langsung dari Google Sheet
+    
+    const fuPAOcc = document.getElementById('fuPAOcc');
+    if (fuPAOcc) fuPAOcc.value = ncr['PAOcc'] || '';
+    
+    const fuPASkip = document.getElementById('fuPASkip');
+    if (fuPASkip) fuPASkip.value = ncr['PASkip'] || '';
+    
+    const fuPADate = document.getElementById('fuPADate');
+    if (fuPADate) fuPADate.value = formatDateForInput(ncr['PADate']);
+
+    // ============================================================
+    // BAGIAN 8: D8 - CLOSURE & VALIDATION
+    // ============================================================
+    // Field-field di D8 diisi langsung dari Google Sheet
+    
+    const fuCongMsg = document.getElementById('fuCongMsg');
+    if (fuCongMsg) fuCongMsg.value = ncr['CongratulationMsg'] || '';
+    
+    const fuStatusNC = document.getElementById('fuStatusNC');
+    if (fuStatusNC) fuStatusNC.value = ncr['StatusNC'] || 'Open';
+    
+    const fuCloseDate = document.getElementById('fuCloseDate');
+    if (fuCloseDate) fuCloseDate.value = formatDateForInput(ncr['CloseDate']);
+
+    // ============================================================
+    // BAGIAN 9: SECTION D3-D8 (DIISI LANGSUNG DARI GOOGLE SHEET)
+    // ============================================================
+    // 🔥 INI BAGIAN PENTING!
+    // Section D3-D8 diisi LANGSUNG dari ncr (Google Sheet)
+    // BUKAN dari dropdown! Ini memastikan section SELALU terisi
+    
+    // ---- D3 SECTION ----
+    document.getElementById('fuInterimActBy').value = ncr['InterimActBy'] || '';
+    
+    // ---- D4 SECTION ----
+    document.getElementById('fuPicD4').value = ncr['RC-AnalysisBy'] || '';
+    
+    // ---- D5 SECTION ----
+    document.getElementById('fuPicD5').value = ncr['CABy'] || '';
+    
+    // ---- D6 SECTION ----
+    document.getElementById('fuPicD6').value = ncr['ValidateCAPABy'] || '';
+    
+    // ---- D7 SECTION ----
+    document.getElementById('fuPicD7').value = ncr['PABy'] || '';
+    
+    // ---- D8 SECTION ----
+    document.getElementById('fuPicD8').value = ncr['ApprovedBy'] || '';
+
+    // ============================================================
+    // BAGIAN 10: D1 DROPDOWN (DIISI DARI SECTION YANG SUDAH TERISI)
+    // ============================================================
+    // 🔥 INI JUGA PENTING!
+    // D1 Dropdown diisi dari SECTION, bukan langsung dari ncr
+    // Karena section sudah pasti terisi
+    
+    // Fungsi untuk mengisi dropdown (dengan auto-add jika tidak ada)
+    function setDropdownFromValue(id, value) {
+        const el = document.getElementById(id);
+        if (!el) {
+            console.warn(`⚠️ Element ${id} tidak ditemukan`);
+            return false;
+        }
+        
+        // Cari option yang match
+        let found = false;
+        for (let opt of el.options) {
+            if (opt.value === value) {
+                el.value = value;
+                found = true;
+                console.log(`✅ ${id} = "${value}" (ditemukan di option)`);
+                break;
+            }
+        }
+        
+        // Jika tidak ditemukan, TAMBAHKAN sebagai option baru
+        if (!found && value) {
+            console.log(`➕ Menambahkan "${value}" ke ${id}`);
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            el.appendChild(opt);
+            el.value = value;
+            console.log(`✅ ${id} = "${value}" (auto-added)`);
+        }
+        
+        return true;
+    }
+    
+    // ---- D1 D3 ← dari SECTION D3 (fuInterimActBy) ----
+    const d3Value = document.getElementById('fuInterimActBy').value;
+    setDropdownFromValue('fuPicD3', d3Value);
+    
+    // ---- D1 D4 ← dari SECTION D4 (fuPicD4) ----
+    const d4Value = document.getElementById('fuPicD4').value;
+    setDropdownFromValue('fuPicD4Select', d4Value);
+    
+    // ---- D1 D5 ← dari SECTION D5 (fuPicD5) ----
+    const d5Value = document.getElementById('fuPicD5').value;
+    setDropdownFromValue('fuPicD5Select', d5Value);
+    
+    // ---- D1 D6 ← dari SECTION D6 (fuPicD6) ----
+    const d6Value = document.getElementById('fuPicD6').value;
+    setDropdownFromValue('fuPicD6Select', d6Value);
+    
+    // ---- D1 D7 ← dari SECTION D7 (fuPicD7) ----
+    const d7Value = document.getElementById('fuPicD7').value;
+    setDropdownFromValue('fuPicD7Select', d7Value);
+    
+    // ---- D1 D8 ← dari SECTION D8 (fuPicD8) ----
+    const d8Value = document.getElementById('fuPicD8').value;
+    setDropdownFromValue('fuPicD8Select', d8Value);
+    
+    // ============================================================
+    // BAGIAN 11: DEBUG - TAMPILKAN HASIL DI CONSOLE
+    // ============================================================
+    console.log('✅ loadNCRViewData SELESAI!');
+    console.log('📊 Hasil:');
+    console.log('  ── Section ──');
+    console.log('  D3 InterimActBy:', document.getElementById('fuInterimActBy').value);
+    console.log('  D4 RC Analysis:', document.getElementById('fuPicD4').value);
+    console.log('  D5 CA By:', document.getElementById('fuPicD5').value);
+    console.log('  D6 Valid By:', document.getElementById('fuPicD6').value);
+    console.log('  D7 PA By:', document.getElementById('fuPicD7').value);
+    console.log('  D8 Approved:', document.getElementById('fuPicD8').value);
+    console.log('  ── D1 Dropdown ──');
+    console.log('  D1 D3:', document.getElementById('fuPicD3').value);
+    console.log('  D1 D4:', document.getElementById('fuPicD4Select').value);
+    console.log('  D1 D5:', document.getElementById('fuPicD5Select').value);
+    console.log('  D1 D6:', document.getElementById('fuPicD6Select').value);
+    console.log('  D1 D7:', document.getElementById('fuPicD7Select').value);
+    console.log('  D1 D8:', document.getElementById('fuPicD8Select').value);
+}
+  
+
+  
+// ==========================================
+// FUNGSI BANTU: FORMAT DATE
+// ==========================================
+function formatDateDisplay(dateStr) {
+  if (!dateStr) return '-';
+  try {
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleDateString('en-GB');
+    }
+  } catch(e) {}
+  return dateStr;
+}
+
+
+  
+// ==========================================
+// 11. INIT - DIJALANKAN SAAT HALAMAN LOAD
+// ==========================================
+window.onload = function() {
+  document.getElementById('loginPage').classList.add('active');
+  document.getElementById('appShell').classList.remove('active');
+};
+
+  // ==========================================
+// FULL PAGE LOADING OVERLAY
+// ==========================================
+function showSyncIndicator() {
+  const el = document.getElementById('syncSpinner');
+  if (el) el.style.display = 'inline-block';
+}
+
+function hideSyncIndicator() {
+  const el = document.getElementById('syncSpinner');
+  if (el) el.style.display = 'none';
+}
+  
+function showLoadingOverlay(message = 'Processing...') {
+  const overlay = document.getElementById('loadingOverlay');
+  const msgEl = document.getElementById('loadingMessage');
+  if (msgEl) msgEl.textContent = message;
+  if (overlay) overlay.classList.add('active');
+}
+
+function hideLoadingOverlay() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+// ==========================================
+// REFRESH DATA DARI GOOGLE SHEET
+// ==========================================
+async function refreshDataFromGS() {
+  showLoadingOverlay('Refreshing data from Google Sheet...');
+  
+  try {
+    await loadDashboardData();
+    await loadPICData();
+    
+    // Jika sedang di follow-up, refresh view
+    if (document.getElementById('followUpPage').style.display === 'block' && currentFollowUpId) {
+      const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+      if (ncr) {
+        loadNCRViewData(ncr);
+        assignFollowUpPIC();
+        
+       loadNCRViewData(ncr);
+      }
+    }
+    
+    hideLoadingOverlay();
+    alert('✅ Data refreshed successfully!');
+    
+  } catch(err) {
+    console.error('Error refreshing data:', err);
+    hideLoadingOverlay();
+    alert('❌ Failed to refresh data: ' + err.message);
+  }
+}
+
+// ==========================================
+// FUNGSI BARU: Isi Dropdown D1 (D3-D8) dari Section
+// ==========================================
+function fillD1DropdownsFromSection() {
+  const mapping = [
+    { dropdown: 'fuPicD3',       source: 'fuInterimActBy' },
+    { dropdown: 'fuPicD4Select', source: 'fuPicD4' },
+    { dropdown: 'fuPicD5Select', source: 'fuPicD5' },
+    { dropdown: 'fuPicD6Select', source: 'fuPicD6' },
+    { dropdown: 'fuPicD7Select', source: 'fuPicD7' },
+    { dropdown: 'fuPicD8Select', source: 'fuPicD8' }
+  ];
+
+  mapping.forEach(({ dropdown, source }) => {
+    const value = document.getElementById(source)?.value || '';
+    const select = document.getElementById(dropdown);
+    if (!select || !value) return;
+
+    // Cek apakah value sudah ada sebagai option
+    let exists = [...select.options].some(opt => opt.value === value);
+    if (!exists) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value;
+      select.appendChild(opt);
+    }
+    select.value = value;
+  });
+}  
+
+function setDropdown(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  // Cari option yang match
+  for (let opt of el.options) {
+    if (opt.value === value) {
+      el.value = value;
+      return;
+    }
+  }
+  // Jika tidak ada di list, tambahkan sementara
+  const opt = document.createElement('option');
+  opt.value = value;
+  opt.textContent = value;
+  el.appendChild(opt);
+  el.value = value;
+}
+
+  // Toggle D2 antara VIEW dan EDIT mode
+
+  function toggleD2Mode(isEdit) {
+  const fields = [
+    'fuViewIssuedBy','fuViewIssuedDate','fuViewIdNo','fuViewType',
+    'fuViewCategory','fuViewShiftTime','fuViewPartNo','fuViewCustomerName',
+    'fuViewLocation','fuViewAffectedQty','fuViewSampleQty','fuViewNcQty',
+    'fuViewNcMode','fuViewNcCategory','fuViewDetailNC','fuViewHowDetected',
+    'fuViewInterimAct','fuViewSortingRequired','fuViewSortingPIC'
+  ];
+  
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.readOnly = !isEdit;
+  });
+  
+  // Tampilkan/sembunyikan upload foto di D2
+  const photoEditSection = document.getElementById('fuPhotoEditSection');
+  if (photoEditSection) {
+    photoEditSection.style.display = isEdit ? 'block' : 'none';
+  }
+  
+  document.getElementById('labelD2Mode').textContent = isEdit ? 'EDIT MODE' : 'VIEW ONLY';
+  document.getElementById('btnUpdateD2').style.display = isEdit ? 'inline-block' : 'none';
+}
+
+// Submit update D2 ke Google Sheet
+
+async function submitD2Update() {
+    if (!currentFollowUpId) { 
+        alert('⚠️ Pilih NCR terlebih dahulu!'); 
+        return; 
+    }
+    
+    // Ambil data NCR yang ada
+    const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+    let photoUrl = ncr?.NCPicture || '';
+    
+    // Upload foto baru jika ada
+    if (fuUploadedPhotoData) {
+        showLoadingOverlay('Uploading photo...');
+        
+        try {
+            // Kirim foto ke Apps Script
+            const uploadPayload = {
+                action: 'uploadImage',
+                data: {
+                    image: fuUploadedPhotoData,
+                    filename: fuUploadedPhotoName || 'fu_photo_' + Date.now() + '.jpg',
+                    idNo: currentFollowUpId,
+                    folder: 'Images'
+                }
+            };
+            
+            // Kirim request (response tidak bisa dibaca karena no-cors)
+            await fetch(API_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'text/plain' },  // Tetap text/plain untuk hindari preflight
+  body: JSON.stringify(uploadPayload)
+});
+            
+            console.log('📤 Upload request sent, waiting for processing...');
+            
+            // 🔥 POLLING: Cek Google Sheet sampai URL muncul
+            const maxAttempts = 30; // Maksimal 30 kali (45 detik)
+            const pollInterval = 1500; // 1.5 detik
+            
+            let found = false;
+            for (let i = 0; i < maxAttempts; i++) {
+                // Update progress
+                document.getElementById('loadingMessage').textContent = 
+                    `Processing photo... (${i + 1}/${maxAttempts})`;
+                
+                // Tunggu sebelum cek
+                await new Promise(resolve => setTimeout(resolve, pollInterval));
+                
+                // Ambil data terbaru dari Google Sheet (INI BISA PAKAI CORS!)
+                const response = await fetch(`${API_URL}?action=getSummary`);
+                const result = await response.json();
+                
+                if (result.status === 'ok' && result.rows) {
+                    // Cari NCR dengan ID yang sama
+                    const updatedNCR = result.rows.find(r => r['ID No.'] === currentFollowUpId);
+                    
+                    // Cek apakah URL foto sudah ada dan valid
+                    if (updatedNCR && updatedNCR.NCPicture && 
+                        updatedNCR.NCPicture.startsWith('http')) {
+                        photoUrl = updatedNCR.NCPicture;
+                        console.log('✅ Photo URL found:', photoUrl);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!found) {
+                console.warn('⚠️ Photo URL not found after polling');
+                // Refresh data sekali lagi
+                await loadDashboardData();
+                const finalCheck = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+                if (finalCheck && finalCheck.NCPicture && finalCheck.NCPicture.startsWith('http')) {
+                    photoUrl = finalCheck.NCPicture;
+                    console.log('✅ Photo URL found after final refresh:', photoUrl);
+                    found = true;
+                }
+            }
+            
+            if (!found) {
+                console.warn('⚠️ Using existing photo URL:', photoUrl);
+                // Tampilkan peringatan tapi lanjutkan
+                alert('⚠️ Foto mungkin belum selesai diupload. Silakan refresh halaman nanti.');
+            }
+            
+        } catch(err) {
+            console.error('❌ Upload error:', err);
+            photoUrl = ncr?.NCPicture || '';
+        }
+        
+        hideLoadingOverlay();
+        resetFuPhotoUpload();
+    }
+    
+    // Step 2: Update data D2 lainnya di Google Sheet
+    const data = {
+        IssuedBy:       document.getElementById('fuViewIssuedBy').value,
+        ShiftTime:      document.getElementById('fuViewShiftTime').value,
+        PartNo:         document.getElementById('fuViewPartNo').value,
+        CustomerName:   document.getElementById('fuViewCustomerName').value,
+        DetectionLocation: document.getElementById('fuViewLocation').value,
+        AffectedQty:    document.getElementById('fuViewAffectedQty').value,
+        SamplingQty:    document.getElementById('fuViewSampleQty').value,
+        RejectQtyDeclated: document.getElementById('fuViewNcQty').value,
+        NCMode:         document.getElementById('fuViewNcMode').value,
+        NCCatagory:     document.getElementById('fuViewNcCategory').value,
+        DetailNC:       document.getElementById('fuViewDetailNC').value,
+        HowItDetected:  document.getElementById('fuViewHowDetected').value,
+        InterimAction:  document.getElementById('fuViewInterimAct').value,
+        SortingRepairReworkRequired: document.getElementById('fuViewSortingRequired').value,
+        SortingReworkPIC: document.getElementById('fuViewSortingPIC').value,
+        NCPicture:      photoUrl // URL dari polling
+    };
+    
+    const payload = {
+        action: 'updateNCR',
+        idNo: currentFollowUpId,
+        step: 'D2',
+        data: data,
+        updatedBy: currentUser?.name || 'Guest'
+    };
+    
+    try {
+        showLoadingOverlay('Updating D2 data...');
+        
+      await fetch(API_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'text/plain' },  // Tetap text/plain untuk hindari preflight
+  body: JSON.stringify(payload)
+});
+        
+        // Tunggu sebentar agar update selesai
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        hideLoadingOverlay();
+        
+        alert('✅ D2 Updated Successfully!');
+        document.getElementById('toggleD2Edit').checked = false;
+        toggleD2Mode(false);
+        
+        // Refresh data dari Google Sheet
+        await loadDashboardData();
+        
+        // Reload view dengan data terbaru
+        const ncrUpdated = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+        if (ncrUpdated) {
+            loadNCRViewData(ncrUpdated);
+            
+            // Tampilkan foto
+            if (ncrUpdated.NCPicture && ncrUpdated.NCPicture.startsWith('http')) {
+                const display = document.getElementById('fuPhotoDisplay');
+                const placeholder = document.getElementById('fuPhotoPlaceholder');
+                if (display) {
+                    display.src = ncrUpdated.NCPicture;
+                    display.style.display = 'block';
+                    display.onerror = function() {
+                        this.style.display = 'none';
+                        if (placeholder) placeholder.style.display = 'flex';
+                    };
+                }
+                if (placeholder) placeholder.style.display = 'none';
+            }
+        }
+        
+    } catch(err) {
+        hideLoadingOverlay();
+        console.error('❌ Error updating D2:', err);
+        alert('❌ Gagal update: ' + err.message);
+    }
+}
+
+
+// ==========================================
+// FUNGSI UPLOAD FOTO DENGAN POLLING
+// ==========================================
+
+async function uploadPhotoToGitHubWithCallback(base64Data, fileName, idNo) {
+    try {
+        console.log('📤 Starting photo upload process...');
+        console.log('📤 File:', fileName);
+        console.log('📤 ID No:', idNo);
+        
+        // Step 1: Kirim foto ke Apps Script
+        const uploadPayload = {
+            action: 'uploadImage',
+            data: {
+                image: base64Data,
+                filename: fileName,
+                folder: 'Images',
+                idNo: idNo // Kirim ID NCR untuk update langsung di Google Sheet
+            }
+        };
+        
+        // Karena no-cors, kita kirim dulu
+        await fetch(API_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'text/plain' },  // Tetap text/plain untuk hindari preflight
+  body: JSON.stringify(uploadPayload)
+});
+        
+        console.log('📤 Upload request sent, waiting for processing...');
+        
+        // Step 2: Polling untuk mendapatkan URL yang sudah diupdate di Google Sheet
+        const maxAttempts = 30; // 30 attempts
+        const pollInterval = 1000; // 1 detik
+        
+        for (let i = 0; i < maxAttempts; i++) {
+            console.log(`🔄 Polling attempt ${i + 1}/${maxAttempts}...`);
+            
+            // Tunggu sebelum poll
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+            
+            // Ambil data terbaru dari Google Sheet
+            const response = await fetch(`${API_URL}?action=getSummary`);
+            const result = await response.json();
+            
+            if (result.status === 'ok' && result.rows) {
+                // Cari NCR dengan ID yang sama
+                const updatedNCR = result.rows.find(r => r['ID No.'] === idNo);
+                if (updatedNCR && updatedNCR.NCPicture && updatedNCR.NCPicture.startsWith('http')) {
+                    console.log('✅ Photo URL found in Google Sheet:', updatedNCR.NCPicture);
+                    return { 
+                        success: true, 
+                        url: updatedNCR.NCPicture,
+                        message: 'Photo uploaded and URL updated in Google Sheet'
+                    };
+                }
+            }
+            
+            // Update progress jika perlu
+            if (i % 5 === 0) {
+                console.log(`⏳ Still waiting for photo URL... (${i + 1}s)`);
+            }
+        }
+        
+        // Timeout: Gagal mendapatkan URL
+        console.warn('⚠️ Timeout waiting for photo URL, checking existing data...');
+        
+        // Coba satu kali lagi dengan data local
+        const finalCheck = await fetch(`${API_URL}?action=getSummary`);
+        const finalResult = await finalCheck.json();
+        if (finalResult.status === 'ok' && finalResult.rows) {
+            const ncr = finalResult.rows.find(r => r['ID No.'] === idNo);
+            if (ncr && ncr.NCPicture && ncr.NCPicture.startsWith('http')) {
+                return { success: true, url: ncr.NCPicture };
+            }
+        }
+        
+        return { 
+            success: false, 
+            error: 'Timeout waiting for photo URL. Please refresh the page to check if upload was successful.'
+        };
+        
+    } catch (error) {
+        console.error('❌ Upload error:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+  
+function formatDateForInput(dateStr) {
+  if (!dateStr) return '';
+  try {
+    // Coba parse berbagai format
+    let date;
+    if (typeof dateStr === 'string' && dateStr.includes('/')) {
+      // Format DD/MM/YYYY dari GS
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        date = new Date(`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
+      }
+    } else {
+      date = new Date(dateStr);
+    }
+    if (date && !isNaN(date.getTime())) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth()+1).padStart(2,'0');
+      const d = String(date.getDate()).padStart(2,'0');
+      return `${y}-${m}-${d}`;
+    }
+  } catch(e) {}
+  return '';
+}
+
+// ==========================================
+// FUNGSI UPLOAD FOTO
+// ==========================================
+// ===== photo upload / camera helpers for Bad & Good samples =====
+let currentCameraTarget = null;    // 'bad' or 'good'
+let cameraStream = null;
+window.photoBadFile = null;
+window.photoGoodFile = null;
+
+function previewPhoto(e, type) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('Max file size is 5MB'); e.target.value = ''; return; }
+  const url = URL.createObjectURL(file);
+  if (type === 'bad') {
+    document.getElementById('photoPreviewBad').src = url;
+    document.getElementById('photoPreviewBadContainer').style.display = 'block';
+    window.photoBadFile = file;
+  } else {
+    document.getElementById('photoPreviewGood').src = url;
+    document.getElementById('photoPreviewGoodContainer').style.display = 'block';
+    window.photoGoodFile = file;
+  }
+}
+
+
+// ✅ FUNGSI BARU
+function previewFuPhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  if (file.size > 5 * 1024 * 1024) {
+    alert('❌ Ukuran foto terlalu besar! Maksimal 5MB.');
+    event.target.value = '';
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const previewContainer = document.getElementById('fuPhotoPreviewContainer');
+    const preview = document.getElementById('fuPhotoPreview');
+    const display = document.getElementById('fuPhotoDisplay');
+    const placeholder = document.getElementById('fuPhotoPlaceholder');
+    
+    preview.src = e.target.result;
+    previewContainer.style.display = 'block';
+    
+    if (placeholder) placeholder.style.display = 'none';
+    if (display) {
+      display.src = e.target.result;
+      display.style.display = 'block';
+    }
+    
+    fuUploadedPhotoData = e.target.result.split(',')[1];
+    fuUploadedPhotoName = file.name;
+  };
+  reader.readAsDataURL(file);
+}  
+
+// ✅ FUNGSI BARU
+function removeFuPhoto() {
+  document.getElementById('fuPhotoUpload').value = '';
+  document.getElementById('fuPhotoPreviewContainer').style.display = 'none';
+  document.getElementById('fuPhotoPreview').src = '#';
+  fuUploadedPhotoData = null;
+  fuUploadedPhotoName = null;
+  
+  const display = document.getElementById('fuPhotoDisplay');
+  const placeholder = document.getElementById('fuPhotoPlaceholder');
+  if (display) {
+    display.style.display = 'none';
+    display.src = '#';
+  }
+  if (placeholder) placeholder.style.display = 'flex';
+}
+  
+  
+// Remove photo (clears input and preview)
+function removePhoto(type) {
+  if (type === 'bad') {
+    document.getElementById('photoUploadBad').value = '';
+    document.getElementById('photoPreviewBad').src = '#';
+    document.getElementById('photoPreviewBadContainer').style.display = 'none';
+    window.photoBadFile = null;
+  } else {
+    document.getElementById('photoUploadGood').value = '';
+    document.getElementById('photoPreviewGood').src = '#';
+    document.getElementById('photoPreviewGoodContainer').style.display = 'none';
+    window.photoGoodFile = null;
+  }
+}
+
+  // ==========================================
+// FUNGSI TAKE PICTURE DENGAN KAMERA
+// ==========================================
+
+let videoStream = null;
+let photoCaptured = false;
+
+// Open camera modal and start camera; pass 'bad' or 'good'
+function openCamera(target) {
+  currentCameraTarget = target;
+  const modal = document.getElementById('cameraModal');
+  modal.style.display = 'flex';
+  startCamera('cameraVideo');
+  // Hide/Show capture/confirm UI as in your modal
+  document.getElementById('btnCapture').style.display = 'inline-block';
+  document.getElementById('btnConfirm').style.display = 'none';
+  document.getElementById('btnRetake').style.display = 'none';
+}
+
+// Start camera into a video element id (string)
+function startCamera(videoId) {
+  const video = document.getElementById(videoId);
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('Camera API not supported');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+    .then(stream => {
+      cameraStream = stream;
+      video.srcObject = stream;
+      video.play();
+    }).catch(err => {
+      console.error(err);
+      alert('Could not start camera: ' + err.message);
+    });
+}
+
+
+function capturePhoto() {
+  const video = document.getElementById('cameraVideo');
+  const canvas = document.getElementById('cameraCanvas');
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  canvas.style.display = 'block';
+  // show confirm/retake buttons
+  document.getElementById('btnCapture').style.display = 'none';
+  document.getElementById('btnConfirm').style.display = 'inline-block';
+  document.getElementById('btnRetake').style.display = 'inline-block';
+  // pause video for preview (optional)
+  video.pause();
+}
+
+function retakePhoto() {
+  const video = document.getElementById('cameraVideo');
+  const canvas = document.getElementById('cameraCanvas');
+  canvas.style.display = 'none';
+  document.getElementById('btnCapture').style.display = 'inline-block';
+  document.getElementById('btnConfirm').style.display = 'none';
+  document.getElementById('btnRetake').style.display = 'none';
+  if (video && cameraStream) video.play();
+}
+
+function confirmPhoto() {
+  const canvas = document.getElementById('cameraCanvas');
+  canvas.toBlob(blob => {
+    const fileName = 'photo_' + (currentCameraTarget || 'shot') + '_' + Date.now() + '.jpg';
+    const file = new File([blob], fileName, { type: 'image/jpeg' });
+    if (currentCameraTarget === 'bad') {
+      window.photoBadFile = file;
+      document.getElementById('photoPreviewBad').src = URL.createObjectURL(file);
+      document.getElementById('photoPreviewBadContainer').style.display = 'block';
+      document.getElementById('photoUploadBad').value = ''; // keep input empty because file created via camera
+    } else {
+      window.photoGoodFile = file;
+      document.getElementById('photoPreviewGood').src = URL.createObjectURL(file);
+      document.getElementById('photoPreviewGoodContainer').style.display = 'block';
+      document.getElementById('photoUploadGood').value = '';
+    }
+    closeCamera();
+  }, 'image/jpeg', 0.9);
+}
+
+
+function closeCamera() {
+  const modal = document.getElementById('cameraModal');
+  modal.style.display = 'none';
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  currentCameraTarget = null;
+  // hide canvas if used
+  const canvas = document.getElementById('cameraCanvas');
+  if (canvas) canvas.style.display = 'none';
+  // reset buttons as needed
+  document.getElementById('btnCapture').style.display = 'inline-block';
+  document.getElementById('btnConfirm').style.display = 'none';
+  document.getElementById('btnRetake').style.display = 'none';
+}
+
+function processPhotoFromCamera(imageData) {
+  const fileInput = document.getElementById('photoUpload');
+  const previewContainer = document.getElementById('photoPreviewContainer');
+  const preview = document.getElementById('photoPreview');
+  
+  // Konversi base64 ke blob
+  const byteString = atob(imageData.split(',')[1]);
+  const mimeType = imageData.split(',')[0].split(':')[1].split(';')[0];
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  const blob = new Blob([ab], { type: mimeType });
+  
+  const fileName = 'camera_' + Date.now() + '.jpg';
+  const file = new File([blob], fileName, { type: mimeType });
+  
+  const dataTransfer = new DataTransfer();
+  dataTransfer.items.add(file);
+  fileInput.files = dataTransfer.files;
+  
+  preview.src = imageData;
+  previewContainer.style.display = 'block';
+  
+  uploadedPhotoData = imageData.split(',')[1];
+  uploadedPhotoName = fileName;
+  
+  const event = new Event('change', { bubbles: true });
+  fileInput.dispatchEvent(event);
+}
+
+// ==========================================
+// FUNGSI KAMERA UNTUK FOLLOW-UP
+// ==========================================
+
+let videoStreamFu = null;
+let photoCapturedFu = false;
+
+function openCameraFu() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('❌ Browser Anda tidak mendukung akses kamera.');
+    return;
+  }
+
+  const modal = document.getElementById('cameraModalFu');
+  if (modal) {
+    modal.style.display = 'flex';
+    startCameraFu();
+  } else {
+    alert('❌ Modal kamera tidak ditemukan. Silakan refresh halaman.');
+  }
+}
+
+async function startCameraFu() {
+  const video = document.getElementById('cameraVideoFu');
+  if (!video) return;
+  
+  try {
+    if (videoStreamFu) {
+      videoStreamFu.getTracks().forEach(track => track.stop());
+    }
+    
+    videoStreamFu = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    
+    video.srcObject = videoStreamFu;
+    await video.play();
+    photoCapturedFu = false;
+    
+    document.getElementById('btnCaptureFu').style.display = 'inline-block';
+    document.getElementById('btnConfirmFu').style.display = 'none';
+    document.getElementById('btnRetakeFu').style.display = 'none';
+    
+    const canvas = document.getElementById('cameraCanvasFu');
+    if (canvas) {
+      canvas.style.display = 'none';
+      video.style.display = 'block';
+    }
+    
+  } catch(err) {
+    console.error('❌ Error opening camera:', err);
+    alert('❌ Tidak dapat mengakses kamera. Error: ' + err.message);
+    closeCameraFu();
+  }
+}
+
+function capturePhotoFu() {
+  const video = document.getElementById('cameraVideoFu');
+  const canvas = document.getElementById('cameraCanvasFu');
+  
+  if (!video || !canvas) return;
+  
+  canvas.width = video.videoWidth || 1280;
+  canvas.height = video.videoHeight || 720;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+  canvas.style.display = 'block';
+  video.style.display = 'none';
+  photoCapturedFu = true;
+  
+  document.getElementById('btnCaptureFu').style.display = 'none';
+  document.getElementById('btnConfirmFu').style.display = 'inline-block';
+  document.getElementById('btnRetakeFu').style.display = 'inline-block';
+}
+
+function retakePhotoFu() {
+  const video = document.getElementById('cameraVideoFu');
+  const canvas = document.getElementById('cameraCanvasFu');
+  
+  video.style.display = 'block';
+  canvas.style.display = 'none';
+  photoCapturedFu = false;
+  
+  document.getElementById('btnCaptureFu').style.display = 'inline-block';
+  document.getElementById('btnConfirmFu').style.display = 'none';
+  document.getElementById('btnRetakeFu').style.display = 'none';
+}
+
+function confirmPhotoFu() {
+  const canvas = document.getElementById('cameraCanvasFu');
+  if (!canvas) return;
+  
+  const imageData = canvas.toDataURL('image/jpeg', 0.9);
+  closeCameraFu();
+  processPhotoFromCameraFu(imageData);
+}
+
+function closeCameraFu() {
+  if (videoStreamFu) {
+    videoStreamFu.getTracks().forEach(track => track.stop());
+    videoStreamFu = null;
+  }
+  
+  const modal = document.getElementById('cameraModalFu');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  photoCapturedFu = false;
+}
+
+function processPhotoFromCameraFu(imageData) {
+  const fileInput = document.getElementById('fuPhotoUpload');
+  const previewContainer = document.getElementById('fuPhotoPreviewContainer');
+  const preview = document.getElementById('fuPhotoPreview');
+  const display = document.getElementById('fuPhotoDisplay');
+  const placeholder = document.getElementById('fuPhotoPlaceholder');
+  
+  const byteString = atob(imageData.split(',')[1]);
+  const mimeType = imageData.split(',')[0].split(':')[1].split(';')[0];
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) {
+    ia[i] = byteString.charCodeAt(i);
+  }
+  const blob = new Blob([ab], { type: mimeType });
+  
+  const fileName = 'fu_camera_' + Date.now() + '.jpg';
+  const file = new File([blob], fileName, { type: mimeType });
+  
+  const dataTransfer = new DataTransfer();
+  dataTransfer.items.add(file);
+  fileInput.files = dataTransfer.files;
+  
+  preview.src = imageData;
+  previewContainer.style.display = 'block';
+  
+  fuUploadedPhotoData = imageData.split(',')[1];
+  fuUploadedPhotoName = fileName;
+  
+  if (placeholder) placeholder.style.display = 'none';
+  if (display) {
+    display.src = imageData;
+    display.style.display = 'block';
+  }
+}
+
+
+// ==========================================
+// FUNGSI UPLOAD KE GITHUB
+// ==========================================
+
+// Fungsi untuk membaca file sebagai base64
+function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            // Ambil hanya bagian base64 (tanpa prefix data:image/...)
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+        };
+        reader.onerror = (error) => {
+            reject(error);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// Fungsi upload ke GitHub via Apps Script
+// Fungsi upload ke GitHub via Apps Script
+async function uploadImageToGitHub(file, folder = 'Images') {
+    try {
+        const base64Content = await readFileAsBase64(file);
+        
+        console.log('📤 Uploading via Apps Script...');
+        console.log('📤 File:', file.name);
+        
+        // 🔥 PAKAI no-cors
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+                action: 'uploadImage',
+                data: {
+                    image: base64Content,
+                    filename: file.name,
+                    folder: folder
+                }
+            })
+        });
+        
+        // Karena no-cors, response tidak bisa dibaca
+        console.log('📤 Upload request sent (no-cors mode)');
+        return { success: true, url: '' };
+        
+    } catch (error) {
+        console.error('❌ Upload error:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
+// Upload foto dari camera (Create NCR)
+  
+  
+async function uploadPhotoToGitHub(base64Data, fileName, idNo) {
+    try {
+        console.log('📤 Uploading photo from camera...');
+        console.log('📤 File:', fileName);
+        console.log('📤 ID No:', idNo);
+        
+        const payload = {
+            action: 'uploadImage',
+            data: {
+                image: base64Data,
+                filename: fileName,
+                folder: 'Images'
+            }
+        };
+        
+        // 🔥 PAKAI no-cors + text/plain
+        await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload)
+        });
+        
+        console.log('📤 Upload request sent (no-cors mode)');
+        return { success: true, url: '' };
+        
+    } catch (error) {
+        console.error('❌ Upload error:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+  
+async function handleImg(event, i) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validasi tipe file
+    if (!file.type.startsWith('image/')) {
+        showToast('Hanya file gambar yang diperbolehkan!', 'error');
+        return;
+    }
+
+    // Validasi ukuran file (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Ukuran file maksimal 5MB!', 'error');
+        return;
+    }
+
+    // Tampilkan preview dulu
+    const reader = new FileReader();
+    reader.onload = e => {
+        questionStates[i].picSrc = e.target.result;
+        questionStates[i].picName = file.name;
+        const img = document.getElementById(`imgPrev_${i}`);
+        img.src = e.target.result;
+        img.style.display = 'block';
+        
+        // Tambahkan status upload
+        const statusEl = document.createElement('span');
+        statusEl.className = 'upload-status';
+        statusEl.id = `uploadStatus_${i}`;
+        statusEl.textContent = '⏳ Uploading to GitHub...';
+        const parentDiv = img.parentElement;
+        const existingStatus = document.getElementById(`uploadStatus_${i}`);
+        if (existingStatus) existingStatus.remove();
+        parentDiv.appendChild(statusEl);
+    };
+    reader.readAsDataURL(file);
+
+    // 🔥 PAKAI uploadImageToGitHub (JSON)
+    try {
+        const result = await uploadImageToGitHub(file);
+        const statusEl = document.getElementById(`uploadStatus_${i}`);
+        
+        if (result.success) {
+            questionStates[i].githubUrl = result.url;
+            questionStates[i].githubPath = result.path || '';
+            questionStates[i].picSrc = result.url;
+            
+            statusEl.textContent = '✅ Uploaded to GitHub';
+            statusEl.style.color = 'var(--success)';
+            showToast(`✅ Image ${file.name} uploaded to GitHub`, 'success');
+            
+            // Tambahkan link untuk melihat file
+            const linkEl = document.createElement('a');
+            linkEl.href = result.url;
+            linkEl.target = '_blank';
+            linkEl.textContent = '🔗 View';
+            linkEl.style.marginLeft = '8px';
+            linkEl.style.fontSize = '12px';
+            linkEl.style.color = 'var(--primary)';
+            statusEl.appendChild(linkEl);
+        } else {
+            statusEl.textContent = `❌ Upload failed: ${result.error}`;
+            statusEl.style.color = 'var(--danger)';
+            showToast(`❌ Failed to upload ${file.name}`, 'error');
+        }
+    } catch (error) {
+        const statusEl = document.getElementById(`uploadStatus_${i}`);
+        if (statusEl) {
+            statusEl.textContent = '❌ Upload failed';
+            statusEl.style.color = 'var(--danger)';
+        }
+        showToast(`❌ Error uploading image: ${error.message}`, 'error');
+    }
+}  
+
+  
+
+  
+</script>
+</body>
+</html>
