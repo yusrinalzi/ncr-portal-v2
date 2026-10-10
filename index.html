@@ -2322,15 +2322,15 @@ async function submitFollowUp(step) {
     return;
   }
   
-  // Ambil data dari form
-  const formData = getFormDataByStep(step);
-  if (!formData) {
-    alert('❌ Error: Data form tidak ditemukan');
-    return;
-  }
+  // Ambil data mentah dari form
+const rawFormData = getFormDataByStep(step);
+if (!rawFormData) {
+  alert('❌ Error: Data form tidak ditemukan');
+  return;
+}
 
-  // Konversi dari PascalCase → camelCase (untuk endpoint baru)
-const formData = convertToCamelCase(rawFormData, step);
+// Konversi dari PascalCase → camelCase
+const convertedData = convertToCamelCase(rawFormData, step);
 
   // Ambil token
   const token = localStorage.getItem('authToken');
@@ -2343,7 +2343,7 @@ const formData = convertToCamelCase(rawFormData, step);
   // Payload untuk endpoint baru
   const payload = {
     step: step,
-    data: formData
+    data: convertedData
   };
   
   console.log(`📤 Submitting ${step}:`, payload);
