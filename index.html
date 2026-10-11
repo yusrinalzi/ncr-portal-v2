@@ -2209,122 +2209,60 @@ async function submitD1D2(e) {
 // 2. Mengisi D3-D8 dari section (yang sudah diisi oleh loadNCRViewData)
 // ============================================================
 
-let picDataMap = {};
+let picDataMap = {};  // Biarkan saja, tidak dipakai
 
 async function loadPICData() {
-    console.log('📌 loadPICData: START');
-    
-    try {
-        // ===== STEP 1: AMBIL DATA DARI GOOGLE SHEET =====
-       const token = localStorage.getItem('authToken');
-const response = await fetch(`${API_URL}/ncr`, {
-  headers: { 'Authorization': `Bearer ${token}` }
-});
-        const res = await response.json();
-        
-        if (res.status === 'ok' && res.data) {
-            picDataMap = res.data;
-            console.log('✅ PIC Data loaded from Google Sheet:', picDataMap);
-            
-            // ===== STEP 2: ISI D1 & D2 (Create Form) =====
-            assignCurrentUserPIC();
-            console.log('✅ D1 & D2 (Create Form) terisi');
-            
-            // ===== STEP 3: ISI D1 & D2 (Follow-up) =====
-            if (document.getElementById('followUpPage').style.display === 'block') {
-                assignFollowUpPIC();
-                console.log('✅ D1 & D2 (Follow-up) terisi');
-            }
-            
-// Dropdown D1 (D3-D8) akan diisi oleh fillD1DropdownsFromSection()
-// yang dipanggil terpisah di openFollowUpFromRow() / updatePIC()
-          
-        } else {
-    console.warn('⚠️ Gagal load PIC data dari Google Sheet, pakai fallback');
-    setFallbackPIC();
-    fillD1DropdownsFromSection();   // ganti dari syncD1FromSections()
-}
-        
-    } catch(e) {
-    console.error('❌ Error loading PIC data:', e);
-    setFallbackPIC();
-    fillD1DropdownsFromSection();   // ganti dari syncD1FromSections()
-}
-    
-    console.log('✅ loadPICData: FINISH');
+  console.log('📌 loadPICData: pakai currentUser langsung');
+  
+  // Isi D1 & D2 dari currentUser (tidak perlu fetch)
+  assignCurrentUserPIC();
+  console.log('✅ D1 & D2 (Create Form) terisi');
+  
+  // Kalau di halaman Follow-up, isi juga D1 & D2 Follow-up
+  if (document.getElementById('followUpPage').style.display === 'block') {
+    assignFollowUpPIC();
+    console.log('✅ D1 & D2 (Follow-up) terisi');
+  }
+  
+  console.log('✅ loadPICData: FINISH');
 }
 
 function assignCurrentUserPIC() {
-  const username = currentUser ? currentUser.name.toLowerCase().trim() : 
-                   (localStorage.getItem('lastUser') || 'guest').toLowerCase().trim();
+  // Ambil username dari currentUser
+  const username = currentUser?.name || 
+                   localStorage.getItem('lastUser') || 
+                   'Guest';
   
   const loggedInDisplay = document.getElementById('loggedInUsernameDisplay');
   if (loggedInDisplay) loggedInDisplay.textContent = username;
   
-  let foundRole = null;
-  let foundFullname = null;
-  
-  for (const [dKey, pic] of Object.entries(picDataMap)) {
-    if (pic.username.toLowerCase() === username) {
-      foundRole = dKey;
-      foundFullname = pic.fullname;
-      break;
-    }
-  }
-  
+  // Isi D1 dan D2 dengan username
   const d1El = document.getElementById('picD1');
   const d2El = document.getElementById('picD2');
   
-  if (foundRole) {
-    if (d1El) d1El.value = foundFullname;
-    if (d2El) d2El.value = foundFullname;
-  } else {
-    const loginName = currentUser ? currentUser.name : (localStorage.getItem('lastUser') || 'Guest');
-    if (d1El) d1El.value = loginName;
-    if (d2El) d2El.value = loginName;
-  }
+  if (d1El) d1El.value = username;
+  if (d2El) d2El.value = username;
   
+  // Tampilkan info
   const infoEl = document.getElementById('userPICInfo');
   const userRoleEl = document.getElementById('userPICRole');
   
   if (infoEl) {
     infoEl.style.display = 'block';
+    infoEl.className = 'alert alert-success py-1 mb-2 small';
   }
   
   if (userRoleEl) {
-    if (foundRole) {
-      userRoleEl.textContent = `${foundRole} (${foundFullname}) - D1 & D2`;
-    } else {
-      userRoleEl.textContent = `⚠️ Login sebagai: ${username} (D1 & D2 diisi manual)`;
-    }
+    userRoleEl.textContent = `${username} (D1 & D2)`;
   }
   
-  if (infoEl) {
-    infoEl.className = foundRole ? 'alert alert-success py-1 mb-2 small' : 'alert alert-warning py-1 mb-2 small';
-  }
+  console.log('✅ assignCurrentUserPIC:', username);
 }
   
  
 function setFallbackPIC() {
-  const username = currentUser ? currentUser.name : (localStorage.getItem('lastUser') || 'Guest');
-  
-  // Coba cari di picDataMap dulu
-  if (picDataMap && Object.keys(picDataMap).length > 0) {
-    assignCurrentUserPIC();
-    return;
-  }
-  
-  // ==========================================
-  // PERUBAHAN: D1 dan D2 SAMA (username login)
-  // ==========================================
-  document.getElementById('picD1').value = username;
-  document.getElementById('picD2').value = username;
-  
-  const infoEl = document.getElementById('userPICInfo');
-  infoEl.style.display = 'block';
-  document.getElementById('loggedInUsernameDisplay').textContent = username;
-  document.getElementById('userPICRole').textContent = '⚠️ Menggunakan data lokal (fallback) - D1 & D2 = ' + username;
-  infoEl.className = 'alert alert-warning py-1 mb-2 small';
+  // Sama dengan assignCurrentUserPIC
+  assignCurrentUserPIC();
 }
 
 // ==========================================
