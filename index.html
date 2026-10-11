@@ -1856,12 +1856,20 @@ function fillAuditorDropdowns(list) {
   dropdowns.forEach(dropdownId => {
     const select = document.getElementById(dropdownId);
     if (select) {
+      // 🔥 SIMPAN pilihan lama
+      const oldValue = select.value;
+      
+      // Isi ulang opsi
       select.innerHTML = '<option value="">-- Select PIC --</option>' +
         list.map(a => `<option value="${a.AuditorName}">${a.AuditorName}</option>`).join('');
+      
+      // 🔥 RESTORE pilihan lama (kalau masih ada di list)
+      if (oldValue && list.some(a => a.AuditorName === oldValue)) {
+        select.value = oldValue;
+      }
     }
   });
 }
-
 
 async function loadDashboardData() {
   try {
