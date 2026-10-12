@@ -3603,176 +3603,83 @@ function setDropdown(id, value) {
 // Submit update D2 ke Google Sheet
 
 async function submitD2Update() {
-    if (!currentFollowUpId) { 
-        alert('⚠️ Pilih NCR terlebih dahulu!'); 
-        return; 
-    }
-    
-    // Ambil data NCR yang ada
-    const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
-    let photoUrl = ncr?.NCPicture || '';
-    
-    // Upload foto baru jika ada
-    if (fuUploadedPhotoData) {
-        showLoadingOverlay('Uploading photo...');
-        
-        try {
-            // Kirim foto ke Apps Script
-            const uploadPayload = {
-                action: 'uploadImage',
-                data: {
-                    image: fuUploadedPhotoData,
-                    filename: fuUploadedPhotoName || 'fu_photo_' + Date.now() + '.jpg',
-                    idNo: currentFollowUpId,
-                    folder: 'Images'
-                }
-            };
-            
-            // Kirim request (response tidak bisa dibaca karena no-cors)
-            await fetch(API_URL, {
-  method: 'POST',
-  headers: { 'Content-Type': 'text/plain' },  // Tetap text/plain untuk hindari preflight
-  body: JSON.stringify(uploadPayload)
-});
-            
-            console.log('📤 Upload request sent, waiting for processing...');
-            
-            // 🔥 POLLING: Cek Google Sheet sampai URL muncul
-            const maxAttempts = 30; // Maksimal 30 kali (45 detik)
-            const pollInterval = 1500; // 1.5 detik
-            
-            let found = false;
-            for (let i = 0; i < maxAttempts; i++) {
-                // Update progress
-                document.getElementById('loadingMessage').textContent = 
-                    `Processing photo... (${i + 1}/${maxAttempts})`;
-                
-                // Tunggu sebelum cek
-                await new Promise(resolve => setTimeout(resolve, pollInterval));
-                
-                // Ambil data terbaru dari Google Sheet (INI BISA PAKAI CORS!)
-                const response = await fetch(`${API_URL}?action=getSummary`);
-                const result = await response.json();
-                
-                if (result.status === 'ok' && result.rows) {
-                    // Cari NCR dengan ID yang sama
-                    const updatedNCR = result.rows.find(r => r['ID No.'] === currentFollowUpId);
-                    
-                    // Cek apakah URL foto sudah ada dan valid
-                    if (updatedNCR && updatedNCR.NCPicture && 
-                        updatedNCR.NCPicture.startsWith('http')) {
-                        photoUrl = updatedNCR.NCPicture;
-                        console.log('✅ Photo URL found:', photoUrl);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            
-            if (!found) {
-                console.warn('⚠️ Photo URL not found after polling');
-                // Refresh data sekali lagi
-                await loadDashboardData();
-                const finalCheck = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
-                if (finalCheck && finalCheck.NCPicture && finalCheck.NCPicture.startsWith('http')) {
-                    photoUrl = finalCheck.NCPicture;
-                    console.log('✅ Photo URL found after final refresh:', photoUrl);
-                    found = true;
-                }
-            }
-            
-            if (!found) {
-                console.warn('⚠️ Using existing photo URL:', photoUrl);
-                // Tampilkan peringatan tapi lanjutkan
-                alert('⚠️ Foto mungkin belum selesai diupload. Silakan refresh halaman nanti.');
-            }
-            
-        } catch(err) {
-            console.error('❌ Upload error:', err);
-            photoUrl = ncr?.NCPicture || '';
-        }
-        
-        hideLoadingOverlay();
-        resetFuPhotoUpload();
-    }
-    
-    // Step 2: Update data D2 lainnya di Google Sheet
-    const data = {
-        IssuedBy:       document.getElementById('fuViewIssuedBy').value,
-        ShiftTime:      document.getElementById('fuViewShiftTime').value,
-        PartNo:         document.getElementById('fuViewPartNo').value,
-        CustomerName:   document.getElementById('fuViewCustomerName').value,
-        DetectionLocation: document.getElementById('fuViewLocation').value,
-        AffectedQty:    document.getElementById('fuViewAffectedQty').value,
-        SamplingQty:    document.getElementById('fuViewSampleQty').value,
-        RejectQtyDeclated: document.getElementById('fuViewNcQty').value,
-        NCMode:         document.getElementById('fuViewNcMode').value,
-        NCCatagory:     document.getElementById('fuViewNcCategory').value,
-        DetailNC:       document.getElementById('fuViewDetailNC').value,
-        HowItDetected:  document.getElementById('fuViewHowDetected').value,
-        InterimAction:  document.getElementById('fuViewInterimAct').value,
-        SortingRepairReworkRequired: document.getElementById('fuViewSortingRequired').value,
-        SortingReworkPIC: document.getElementById('fuViewSortingPIC').value,
-        NCPicture:      photoUrl // URL dari polling
-    };
-    
-    const payload = {
-        action: 'updateNCR',
-        idNo: currentFollowUpId,
-        step: 'D2',
-        data: data,
-        updatedBy: currentUser?.name || 'Guest'
-    };
-    
-    try {
-        showLoadingOverlay('Updating D2 data...');
-        
-      await fetch(API_URL, {
-  method: 'POST',
-  headers: { 'Content-Type': 'text/plain' },  // Tetap text/plain untuk hindari preflight
-  body: JSON.stringify(payload)
-});
-        
-        // Tunggu sebentar agar update selesai
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        hideLoadingOverlay();
-        
-        alert('✅ D2 Updated Successfully!');
-        document.getElementById('toggleD2Edit').checked = false;
-        toggleD2Mode(false);
-        
-        // Refresh data dari Google Sheet
-        await loadDashboardData();
-        
-        // Reload view dengan data terbaru
-        const ncrUpdated = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
-        if (ncrUpdated) {
-            loadNCRViewData(ncrUpdated);
-            
-            // Tampilkan foto
-            if (ncrUpdated.NCPicture && ncrUpdated.NCPicture.startsWith('http')) {
-                const display = document.getElementById('fuPhotoDisplay');
-                const placeholder = document.getElementById('fuPhotoPlaceholder');
-                if (display) {
-                    display.src = ncrUpdated.NCPicture;
-                    display.style.display = 'block';
-                    display.onerror = function() {
-                        this.style.display = 'none';
-                        if (placeholder) placeholder.style.display = 'flex';
-                    };
-                }
-                if (placeholder) placeholder.style.display = 'none';
-            }
-        }
-        
-    } catch(err) {
-        hideLoadingOverlay();
-        console.error('❌ Error updating D2:', err);
-        alert('❌ Gagal update: ' + err.message);
-    }
-}
+  if (!currentFollowUpId) { 
+    alert('⚠️ Pilih NCR terlebih dahulu!'); 
+    return; 
+  }
 
+  // Ambil data dari form
+  const rawFormData = {
+    issuedBy: document.getElementById('fuViewIssuedBy').value,
+    shiftTime: document.getElementById('fuViewShiftTime').value,
+    partNo: document.getElementById('fuViewPartNo').value,
+    customerName: document.getElementById('fuViewCustomerName').value,
+    detectionLocation: document.getElementById('fuViewLocation').value,
+    affectedQty: document.getElementById('fuViewAffectedQty').value,
+    samplingQty: document.getElementById('fuViewSampleQty').value,
+    rejectQtyDeclared: document.getElementById('fuViewNcQty').value,
+    ncMode: document.getElementById('fuViewNcMode').value,
+    ncCategory: document.getElementById('fuViewNcCategory').value,
+    detailNC: document.getElementById('fuViewDetailNC').value,
+    howItDetected: document.getElementById('fuViewHowDetected').value,
+    interimAction: document.getElementById('fuViewInterimAct').value,
+    sortingRepairReworkRequired: document.getElementById('fuViewSortingRequired').value,
+    sortingReworkPIC: document.getElementById('fuViewSortingPIC').value
+  };
+
+  try {
+    showLoadingOverlay('Updating D2 data...');
+
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      hideLoadingOverlay();
+      alert('⚠️ Sesi login habis. Silakan login ulang.');
+      doLogout();
+      return;
+    }
+
+    // PATCH ke endpoint baru
+    const response = await fetch(`${API_URL}/ncr/${currentFollowUpId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        step: 'D2',
+        data: rawFormData
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.status !== 'ok') {
+      hideLoadingOverlay();
+      alert('❌ Gagal update: ' + (result.message || 'Unknown error'));
+      return;
+    }
+
+    hideLoadingOverlay();
+    alert('✅ D2 Updated Successfully!');
+
+    document.getElementById('toggleD2Edit').checked = false;
+    toggleD2Mode(false);
+
+    // Refresh data
+    await loadAllData();
+
+    // Reload view
+    const ncrUpdated = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+    if (ncrUpdated) {
+      loadNCRViewData(ncrUpdated);
+    }
+
+  } catch(err) {
+    hideLoadingOverlay();
+    console.error('❌ Error updating D2:', err);
+    alert('❌ Gagal update: ' + err.message);
+  }
+}
 
 // ==========================================
 // FUNGSI UPLOAD FOTO DENGAN POLLING
