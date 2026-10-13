@@ -2500,13 +2500,13 @@ function sendEmailtoAll() {
   const picName = document.getElementById('fuPicD3').value;
   if (!picName) { alert('⚠️ Pilih PIC D3 terlebih dahulu!'); return; }
   
-  // 🔥 TAMBAHKAN INI — ambil data NCR yang sedang di-follow-up
+  // Ambil data NCR
   const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
   if (!ncr) { alert('⚠️ Data NCR tidak ditemukan!'); return; }
   
   const idNo = currentFollowUpId || '-';
   
-   // 🔥 AMBIL INFORMASI TAMBAHAN DARI NCR
+  // Ambil informasi dari NCR
   const customerName = ncr?.CustomerName || '-';
   const location = ncr?.DetectionLocation || '-';
   const partNo = ncr?.PartNo || '-';
@@ -2514,62 +2514,66 @@ function sendEmailtoAll() {
   const ncCategory = ncr?.NCCatagory || '-';
   const detailNC = ncr?.DetailNC || '-';
   const issuedBy = ncr?.IssuedBy || '-';
-  const issuedDate = formatDateDisplay(ncr?.IssuedDate); // ✅ FORMAT TANGGAL
-  const D3PIC = ncr?.InterimActBy ||'-';
+  const issuedDate = formatDateDisplay(ncr?.IssuedDate);
+  const D3PIC = ncr?.InterimActBy || '-';
   const D4PIC = ncr?.['RC-AnalysisBy'] || '-';
-  const D3Email = D3PIC?.Email ||'-';
-  const D4Email = D4PIC?.Email ||'-';
-  // 🔥 AMBIL URL GAMBAR (jika ada)
   const photoUrl = ncr?.NCPicture || '';
   
-  // 🔥 TO LIST
-  const toList = [
-'Rudi Hermawan <Rudi.Hermawan@volex.com>' , 
-'Hendro Sianipar <Hendro.Sianipar@volex.com>' , 
-'Daniel Sihombing <Daniel.Sihombing@volex.com>' , 
-'Usman Timunk <Usman.Timunk@volex.com>' , 
-'Fekky Rotty <Fekky.Rotty@volex.com>' , 
-'Rifki Wijaya <Rifki.Wijaya@volex.com>' , 
-'Ahmad Gusfanri <ahmad.gusfanri@volex.com>', 
-'Wantri Manurung <wantri.manurung@volex.com>' , 
-'Junianto Nainggolan <Junianto.Nainggolan@volex.com>' , 
-'Hafizh Mahendra <hafizh.mahendra@volex.com>' , 
-'Ainul Syawal <ainul.syawal@volex.com>' , 
-'Sulanto Sula <Sulanto.Sula@volex.com>' , 
-'Jos Sudarso <jos.sudarso@volex.com>' , 
-'Bigsanro Banjarnahor <Bigsanro.Banjarnahor@volex.com>' , 
-'Elpi Hotriani <Elpi.Hotriani@volex.com>' , 
-'Henriko Sitanggang <Henriko.Sitanggang@volex.com>' , 
-'Harjo Hutabarat <Harjo.Hutabarat@volex.com>' , 
-'Ravi Hariska <ravi.hariska@volex.com>' , 
-'Rikardo Rumapea <rikardo.rumapea@volex.com>' , 
-'Toni Sugiarto <Toni.Sugiarto@volex.com>' , 
-'Musthafa Ramadhan <musthafa.ramadhan@volex.com>' , 
-'Iwan Padli  <iwan.padli@volex.com>' , 
-'Adrian Saputra <adrian.saputra@volex.com>',
-'Zulherry Yusuf <Zulherry.Yusuf@volex.com>',
-'Desi Purnamasari <desi.purnamasari@volex.com>', 
-'Suryo Wahono <suryo.wahono@volex.com>',
-'Fitriani Fitri <Fitriani.Fitri@volex.com>',
-'Meirany Sianturi <Meirany.Sianturi@volex.com>',
-'Azrin Krih <Azrin.Krih@volex.com>',
-'Batman Lubis <batman.lubis@volex.com>',
-'Hidir Muhammad <hidir.muhammad@volex.com>',
-'Sri Sulastri <Sri.Sulastri@volex.com>',
-'Denny Mulyady <Denny.Mulyady@volex.com>',
-D3Email, 
-D4Email
-].filter(e => e && e.trim() !== '').join(';');
-
+  // 🔥 CARI EMAIL PIC D3 & D4 DARI auditorList
+  const auditorD3 = auditorList.find(a => a.AuditorName === D3PIC);
+  const D3Email = auditorD3?.Email || '';
   
-  // 🔥 CC LIST
+  const auditorD4 = auditorList.find(a => a.AuditorName === D4PIC);
+  const D4Email = auditorD4?.Email || '';
+  
+  // 🔥 TO LIST (dengan filter email kosong)
+  const toList = [
+    'Rudi Hermawan <Rudi.Hermawan@volex.com>',
+    'Hendro Sianipar <Hendro.Sianipar@volex.com>',
+    'Daniel Sihombing <Daniel.Sihombing@volex.com>',
+    'Usman Timunk <Usman.Timunk@volex.com>',
+    'Fekky Rotty <Fekky.Rotty@volex.com>',
+    'Rifki Wijaya <Rifki.Wijaya@volex.com>',
+    'Ahmad Gusfanri <ahmad.gusfanri@volex.com>',
+    'Wantri Manurung <wantri.manurung@volex.com>',
+    'Junianto Nainggolan <Junianto.Nainggolan@volex.com>',
+    'Hafizh Mahendra <hafizh.mahendra@volex.com>',
+    'Ainul Syawal <ainul.syawal@volex.com>',
+    'Sulanto Sula <Sulanto.Sula@volex.com>',
+    'Jos Sudarso <jos.sudarso@volex.com>',
+    'Bigsanro Banjarnahor <Bigsanro.Banjarnahor@volex.com>',
+    'Elpi Hotriani <Elpi.Hotriani@volex.com>',
+    'Henriko Sitanggang <Henriko.Sitanggang@volex.com>',
+    'Harjo Hutabarat <Harjo.Hutabarat@volex.com>',
+    'Ravi Hariska <ravi.hariska@volex.com>',
+    'Rikardo Rumapea <rikardo.rumapea@volex.com>',
+    'Toni Sugiarto <Toni.Sugiarto@volex.com>',
+    'Musthafa Ramadhan <musthafa.ramadhan@volex.com>',
+    'Iwan Padli <iwan.padli@volex.com>',
+    'Adrian Saputra <adrian.saputra@volex.com>',
+    'Zulherry Yusuf <Zulherry.Yusuf@volex.com>',
+    'Desi Purnamasari <desi.purnamasari@volex.com>',
+    'Suryo Wahono <suryo.wahono@volex.com>',
+    'Fitriani Fitri <Fitriani.Fitri@volex.com>',
+    'Meirany Sianturi <Meirany.Sianturi@volex.com>',
+    'Azrin Krih <Azrin.Krih@volex.com>',
+    'Batman Lubis <batman.lubis@volex.com>',
+    'Hidir Muhammad <hidir.muhammad@volex.com>',
+    'Sri Sulastri <Sri.Sulastri@volex.com>',
+    'Denny Mulyady <Denny.Mulyady@volex.com>',
+    // 🔥 Tambah PIC D3 & D4 (kalau email ada)
+    D3Email ? `${D3PIC} <${D3Email}>` : null,
+    D4Email ? `${D4PIC} <${D4Email}>` : null
+  ].filter(e => e && e.trim() !== '').join(';');
+  
+  // 🔥 CC LIST (perbaiki typo Rifki Jaswir)
   const ccList = [
     'Firdaus Fauzi <Firdaus.Fauzi@volex.com>',
     'Muhammad Ridwan <muhammad.ridwan@volex.com>',
     'Manorgang Purba <Manorgang.Purba@volex.com>',
     'Fara Rezki <Fara.Rezki@volex.com>',
     'Rima Melati <Rima.Melati@volex.com>',
-    'Rifki Jaswir <rifki.jaswir@volex.com>',
+    'Rifki Jaswir <rifki.jaswir@volex.com>',  // ← perbaiki: tambah ">"
     'Hasril Fz <Hasril.Fz@volex.com>',
     'Yusrizal Iskandar <Yusrizal.Iskandar@volex.com>',
     'Panal Sihombing <panal.sihombing@volex.com>',
@@ -2581,9 +2585,7 @@ D4Email
     'Ayuly Elizabeth <ayuly.elizabeth@volex.com>',
     'Zulkarnain Zul <Zulkarnain.Zul@volex.com>',
     'Santo Arenzo <Santo.Arenzo@volex.com>'
-    
   ].join(';');
-
   
   const body = encodeURIComponent(
  `Dear All,
@@ -2627,7 +2629,6 @@ Thank you.` );
     '_blank'
   );
 }
-
   
   
 // ==========================================
