@@ -2516,7 +2516,9 @@ function sendEmailtoAll() {
   const issuedBy = ncr?.IssuedBy || '-';
   const issuedDate = formatDateDisplay(ncr?.IssuedDate); // ✅ FORMAT TANGGAL
   const D3PIC = ncr?.InterimActBy ||'-';
-  const D4PIC = ncr?.['RC-AnalysisBy'] || '-'; 
+  const D4PIC = ncr?.['RC-AnalysisBy'] || '-';
+  const D3Email = D3PIC?.Email ||'-';
+  const D4Email = D4PIC?.Email ||'-';
   // 🔥 AMBIL URL GAMBAR (jika ada)
   const photoUrl = ncr?.NCPicture || '';
   
@@ -2554,9 +2556,11 @@ function sendEmailtoAll() {
 'Batman Lubis <batman.lubis@volex.com>',
 'Hidir Muhammad <hidir.muhammad@volex.com>',
 'Sri Sulastri <Sri.Sulastri@volex.com>',
-'Denny Mulyady <Denny.Mulyady@volex.com>'
+'Denny Mulyady <Denny.Mulyady@volex.com>',
+D3Email, 
+D4Email
+].filter(e => e && e.trim() !== '').join(';');
 
-  ].join(';');
   
   // 🔥 CC LIST
   const ccList = [
@@ -2565,7 +2569,7 @@ function sendEmailtoAll() {
     'Manorgang Purba <Manorgang.Purba@volex.com>',
     'Fara Rezki <Fara.Rezki@volex.com>',
     'Rima Melati <Rima.Melati@volex.com>',
-    'Rifki Jaswir <rifki.jaswir@volex.com',
+    'Rifki Jaswir <rifki.jaswir@volex.com>',
     'Hasril Fz <Hasril.Fz@volex.com>',
     'Yusrizal Iskandar <Yusrizal.Iskandar@volex.com>',
     'Panal Sihombing <panal.sihombing@volex.com>',
@@ -2603,11 +2607,14 @@ There is an NC with number: ${idNo}.
 
 For the all PIC team, please complete and follow-up the required action to prevent the recurrence issue.
 
-Hi ${D3PIC} & ${D4PIC}, 
-Please conduct the Interim/Containment Action immediately (within 24 hours) & Root Cause Analysis 
+Hi ${D3PIC}, 
+Please conduct the Interim/Containment Action immediately (within 24 hours).
+
+Hi ${D4PIC},
+You are asigned to conduct the rootcause analysis or asign the proper PIC to condutc the root-cause analysis.
 
 Please open the NCR portal by clicking THIS LINK:
-https://yusrinalzi.github.io/Internal-NC-Report/
+https://yusrinalzi.github.io/ncr-portal-v2/
 
 Use your User Name and ID to login or contact QMS team for access.
 
