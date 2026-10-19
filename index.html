@@ -3049,19 +3049,22 @@ async function updatePIC() {
   if (currentUser?.isGuest) { alert('⚠️ Guest tidak dapat melakukan perubahan data.'); return; }
   if (!currentFollowUpId) { alert('⚠️ Please select an NCR first!'); return; }
   
-  // Kumpulkan data PIC dari form
+  // Ambil data PIC (sesuai field ID yang ada)
   const picData = {
     D1: document.getElementById('fuPicD1').value,
     D2: document.getElementById('fuPicD2').value,
-    D3: document.getElementById('fuPicD3').value,
-    D4: document.getElementById('fuPicD4Select')?.value || document.getElementById('fuPicD4').value,
-    D5: document.getElementById('fuPicD5Select')?.value || document.getElementById('fuPicD5').value,
-    D6: document.getElementById('fuPicD6Select')?.value || document.getElementById('fuPicD6').value,
-    D7: document.getElementById('fuPicD7Select')?.value || document.getElementById('fuPicD7').value,
-    D8: document.getElementById('fuPicD8Select')?.value || document.getElementById('fuPicD8').value,
+    D3: document.getElementById('fuPicD3')?.value || '',
+    D4: document.getElementById('fuPicD4Select')?.value || document.getElementById('fuPicD4')?.value || '',
+    D5: document.getElementById('fuPicD5Select')?.value || document.getElementById('fuPicD5')?.value || '',
+    D6: document.getElementById('fuPicD6Select')?.value || document.getElementById('fuPicD6')?.value || '',
+    D7: document.getElementById('fuPicD7Select')?.value || document.getElementById('fuPicD7')?.value || '',
+    D8: document.getElementById('fuPicD8Select')?.value || document.getElementById('fuPicD8')?.value || ''
   };
   
-  if (!picData.D1 || !picData.D2) { alert('⚠️ D1 and D2 must be filled!'); return; }
+  if (!picData.D1 || !picData.D2) {
+    alert('⚠️ D1 and D2 must be filled!');
+    return;
+  }
   
   toggleButtonSpinner('btnUpdatePIC', true);
   const token = localStorage.getItem('authToken');
@@ -3069,7 +3072,7 @@ async function updatePIC() {
   try {
     showLoadingOverlay('Updating PIC...');
     
-    // PATCH ke Neon Function
+    // 🔥 PATCH ke Neon Function (Update semua PIC sekaligus)
     const response = await fetch(`${API_URL}/ncr/${currentFollowUpId}`, {
       method: 'PATCH',
       headers: {
@@ -3077,36 +3080,73 @@ async function updatePIC() {
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        step: 'D2', // D1 & D2 (IssuedBy & PIC) diupdate via step D2
+        step: 'D2', // Kita pakai step D2 untuk update PIC
         data: {
-          // D1 & D2 (IssuedBy)
-          issuedBy: picData.D1, 
-          // D3-D8 (PIC)
-          interimActBy: picData.D3,
-          rcAnalysisBy: picData.D4,
-          caBy: picData.D5,
-          validateCapaBy: picData.D6,
-          paBy: picData.D7,
-          approvedBy: picData.D8
+          issuedBy: picData.D1,       // D1 = IssuedBy
+          // D2 juga sama dengan IssuedBy, jadi tidak perlu field terpisah
+          interimActBy: picData.D3,   // D3 = InterimActBy
+          rcAnalysisBy: picData.D4,   // D4 = RC-AnalysisBy
+          caBy: picData.D5,           // D5 = CABy
+          validateCapaBy: picData.D6, // D6 = ValidateCAPABy
+          paBy: picData.D7,           // D7 = PABy
+          approvedBy: picData.D8      // D8 = ApprovedBy
         }
       })
     });
     
     const result = await response.json();
-    if (result.status !== 'ok') throw new Error(result.message || 'Gagal update PIC');
+    
+    if (result.status !== 'ok') {
+      throw new Error(result.message || 'Gagal update PIC');
+    }
     
     hideLoadingOverlay();
     alert('✅ PIC Updated Successfully!');
     
-    // Refresh data dari Neon
-    await loadAllData(); 
+    // 🔥 Refresh data dari Neon (TANPA reset dropdown)
+    const refreshRes = await fetch(`${API_URL}/ncr`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const refreshData = await refreshRes.json();
     
-    // Tampilkan ulang data NCR yang baru diupdate
-    const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
-    if (ncr) {
-      loadNCRViewData(ncr);
-      assignFollowUpPIC();
-      fillD1DropdownsFromSection();
+    if (refreshData.status === 'ok') {
+      rawDataNCR = refreshData.data.map(r => ({
+        'ID No.': r.id_no,
+        'Type': r.type,
+        'Category': r.category,
+        'IssuedBy': r.issued_by,
+        'IssuedDate': r.issued_date,
+        'CustomerName': r.customer_name,
+        'PartNo': r.part_no,
+        'DetailNC': r.detail_nc,
+        'NCMode': r.nc_mode,
+        'NCCatagory': r.nc_category,
+        'StatusNC': r.status_nc,
+        'InterimActBy': r.interim_act_by,
+        'RC-AnalysisBy': r.rc_analysis_by,
+        'CABy': r.ca_by,
+        'ValidateCAPABy': r.validate_capa_by,
+        'PABy': r.pa_by,
+        'ApprovedBy': r.approved_by,
+        'NCPicture': r.nc_picture,
+        'OKPicture': r.ok_picture,
+        // ... tambahkan field lain sesuai kebutuhan
+      }));
+      
+      // Update tampilan dashboard
+      renderDashboard(rawDataNCR);
+      
+      // Reload view Follow-up (tanpa reset dropdown PIC)
+      const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
+      if (ncr) {
+        loadNCRViewData(ncr);
+        // assignFollowUpPIC() JANGAN dipanggil, karena akan reset dropdown
+        // Cukup pastikan D1/D2 terisi
+        document.getElementById('fuPicD1').value = ncr.IssuedBy || currentUser.name;
+        document.getElementById('fuPicD2').value = ncr.IssuedBy || currentUser.name;
+        // Update dropdown D1 (D3-D8) dari section yang baru
+        fillD1DropdownsFromSection();
+      }
     }
     
   } catch(err) {
@@ -3117,7 +3157,6 @@ async function updatePIC() {
     toggleButtonSpinner('btnUpdatePIC', false);
   }
 }
-
 // ============================================================
 // FUNCTION: loadNCRViewData
 // ============================================================
