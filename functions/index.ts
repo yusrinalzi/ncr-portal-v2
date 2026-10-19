@@ -145,7 +145,7 @@ app.get('/ncr', async (c) => {
     const sql = neon(c.env.DATABASE_URL);
     const rows = await sql`
       SELECT 
-        id_no, type, category, issued_by, issued_date,
+        id_no, sort_order, type, category, issued_by, issued_date,
         shift_time, customer_name, part_no, affected_qty,
         sampling_qty, reject_qty_declared, detection_location,
         detail_nc, nc_picture, ok_picture, nc_category, nc_mode,
@@ -159,7 +159,7 @@ app.get('/ncr', async (c) => {
         validation_ca_occ, validation_ca_skip, validation_result,
         status_nc, approved_by, close_date, congratulation_msg, period
       FROM public.ncmr_pdr_master
-      ORDER BY issued_date DESC NULLS LAST, id_no DESC
+      ORDER BY sort_order ASC
     `;
     return c.json({ status: 'ok', total: rows.length, data: rows });
   } catch (err: any) {
@@ -335,7 +335,7 @@ app.post('/ncr', async (c) => {
     // ============================================================
     const inserted = await sql`
       INSERT INTO public.ncmr_pdr_master (
-        id_no, type, category, issued_by, issued_date, shift_time,
+        sort_order, id_no, type, category, issued_by, issued_date, shift_time,
         customer_name, part_no, affected_qty, sampling_qty, reject_qty_declared,
         detection_location, detail_nc, nc_picture, ok_picture, nc_category,
         nc_mode, how_it_detected, interim_action,
@@ -348,7 +348,7 @@ app.post('/ncr', async (c) => {
         validation_ca_skip, validation_result, status_nc, approved_by,
         close_date, congratulation_msg, period
       ) VALUES (
-        ${row.id_no}, ${row.type}, ${row.category}, ${row.issued_by}, ${row.issued_date},
+        nextval('ncmr_sort_order_seq'), ${row.id_no}, ${row.type}, ${row.category}, ${row.issued_by}, ${row.issued_date},
         ${row.shift_time}, ${row.customer_name}, ${row.part_no}, ${row.affected_qty},
         ${row.sampling_qty}, ${row.reject_qty_declared}, ${row.detection_location},
         ${row.detail_nc}, ${row.nc_picture}, ${row.ok_picture}, ${row.nc_category},
@@ -514,6 +514,12 @@ app.patch('/ncr/:id', async (c) => {
       addField('sorting_rework_pic', data.sortingReworkPIC);
       addField('nc_picture', data.ncPicture);
       addField('ok_picture', data.okPicture);
+      addField('interim_act_by', data.interimActBy);
+      addField('rc_analysis_by', data.rcAnalysisBy);
+      addField('ca_by', data.caBy);
+      addField('validate_capa_by', data.validateCapaBy);
+      addField('pa_by', data.paBy);
+      addField('approved_by', data.approvedBy);
     }
 
     if (step === 'D3') {
