@@ -1872,18 +1872,8 @@ function fillAuditorDropdowns(list) {
 }
 
 async function loadDashboardData() {
-  try {
-    const response = await fetch(`${API_URL}?action=getSummary`);
-    const res = await response.json();
-    if (res.status === 'ok') {
-      rawDataNCR = res.rows;
-      renderDashboard(rawDataNCR);
-      initCharts(rawDataNCR);
-    }
-  } catch(e) { 
-    console.error("Error loading data:", e);
-    document.getElementById('ncrTableBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Failed to load data. Check console.</td></tr>';
-  }
+  // Panggil fungsi utama loadAllData yang sudah terhubung ke Neon
+  await loadAllData(); 
 }
 
 function renderDashboard(data) {
@@ -3001,21 +2991,16 @@ function parseDate(dateStr) {
 
 // ==========================================
 // FUNGSI FOLLOW-UP: ASSIGN D1 & D2
-// ==========================================
 function assignFollowUpPIC() {
-  // Ambil data NCR yang sedang di-follow-up
+  // Pastikan rawDataNCR ada sebelum mencari
+  if (!rawDataNCR || rawDataNCR.length === 0) return; 
+  
   const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
-  
-  // D1 dan D2 = IssuedBy dari Google Sheet
   const issuedBy = ncr?.IssuedBy || '';
-  
-  // Jika IssuedBy kosong, fallback ke username login
   const value = issuedBy || currentUser?.name || (localStorage.getItem('lastUser') || 'Guest');
   
-  // Isi D1 dan D2
   const d1El = document.getElementById('fuPicD1');
   const d2El = document.getElementById('fuPicD2');
-  
   if (d1El) d1El.value = value;
   if (d2El) d2El.value = value;
 }
@@ -3061,79 +3046,75 @@ function toggleButtonSpinner(buttonId, show) {
 // ==========================================
   
 async function updatePIC() {
-
-  // ✅ TAMBAHKAN INI DI PALING ATAS
-  if (currentUser?.isGuest) {
-    alert('⚠️ Guest tidak dapat melakukan perubahan data.');
-    return;
-  }
- 
-  if (!currentFollowUpId) {
-    alert('⚠️ Please select an NCR first!');
-    return;
-  }
+  if (currentUser?.isGuest) { alert('⚠️ Guest tidak dapat melakukan perubahan data.'); return; }
+  if (!currentFollowUpId) { alert('⚠️ Please select an NCR first!'); return; }
   
+  // Kumpulkan data PIC dari form
   const picData = {
-  D1: document.getElementById('fuPicD1').value,
-  D2: document.getElementById('fuPicD2').value,
-  D3: document.getElementById('fuPicD3').value,
-  D4: document.getElementById('fuPicD4Select')?.value || document.getElementById('fuPicD4').value,
-  D5: document.getElementById('fuPicD5Select')?.value || document.getElementById('fuPicD5').value,
-  D6: document.getElementById('fuPicD6Select')?.value || document.getElementById('fuPicD6').value,
-  D7: document.getElementById('fuPicD7Select')?.value || document.getElementById('fuPicD7').value,
-  D8: document.getElementById('fuPicD8Select')?.value || document.getElementById('fuPicD8').value,
-};
-  
-  if (!picData.D1 || !picData.D2) {
-    alert('⚠️ D1 and D2 must be filled!');
-    return;
-  }
-  
-  toggleButtonSpinner('btnUpdatePIC', true);
-  
-  const payload = {
-    action: 'updatePIC',
-    idNo: currentFollowUpId,
-    data: picData,
-    timestamp: new Date().toISOString(),
-    updatedBy: currentUser ? currentUser.name : 'Guest'
+    D1: document.getElementById('fuPicD1').value,
+    D2: document.getElementById('fuPicD2').value,
+    D3: document.getElementById('fuPicD3').value,
+    D4: document.getElementById('fuPicD4Select')?.value || document.getElementById('fuPicD4').value,
+    D5: document.getElementById('fuPicD5Select')?.value || document.getElementById('fuPicD5').value,
+    D6: document.getElementById('fuPicD6Select')?.value || document.getElementById('fuPicD6').value,
+    D7: document.getElementById('fuPicD7Select')?.value || document.getElementById('fuPicD7').value,
+    D8: document.getElementById('fuPicD8Select')?.value || document.getElementById('fuPicD8').value,
   };
   
+  if (!picData.D1 || !picData.D2) { alert('⚠️ D1 and D2 must be filled!'); return; }
+  
+  toggleButtonSpinner('btnUpdatePIC', true);
+  const token = localStorage.getItem('authToken');
+  
   try {
-    await fetch(API_URL, {
-  method: 'POST',
-  headers: { 'Content-Type': 'text/plain' },  // Tetap text/plain untuk hindari preflight
-  body: JSON.stringify(payload)
-});
+    showLoadingOverlay('Updating PIC...');
     
-    toggleButtonSpinner('btnUpdatePIC', false);
+    // PATCH ke Neon Function
+    const response = await fetch(`${API_URL}/ncr/${currentFollowUpId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        step: 'D2', // D1 & D2 (IssuedBy & PIC) diupdate via step D2
+        data: {
+          // D1 & D2 (IssuedBy)
+          issuedBy: picData.D1, 
+          // D3-D8 (PIC)
+          interimActBy: picData.D3,
+          rcAnalysisBy: picData.D4,
+          caBy: picData.D5,
+          validateCapaBy: picData.D6,
+          paBy: picData.D7,
+          approvedBy: picData.D8
+        }
+      })
+    });
+    
+    const result = await response.json();
+    if (result.status !== 'ok') throw new Error(result.message || 'Gagal update PIC');
+    
+    hideLoadingOverlay();
     alert('✅ PIC Updated Successfully!');
     
-    showLoadingOverlay('Refreshing data from Google Sheet...');
-    await loadDashboardData();
-    await loadPICData();
+    // Refresh data dari Neon
+    await loadAllData(); 
     
+    // Tampilkan ulang data NCR yang baru diupdate
     const ncr = rawDataNCR.find(r => r['ID No.'] === currentFollowUpId);
-if (ncr) {
-  // 🔥 Cuma fetch ulang kalau auditorList BELUM ada (hindari panggilan boros)
-if (!auditorList || auditorList.length === 0) {
-  await loadAuditors();
-} else {
-  fillAuditorDropdowns(auditorList);  // pakai data yang sudah ada, tanpa fetch baru
-}
- 
-  loadNCRViewData(ncr);
-  assignFollowUpPIC();
-  fillD1DropdownsFromSection();
-}
-    
-    hideLoadingOverlay();
+    if (ncr) {
+      loadNCRViewData(ncr);
+      assignFollowUpPIC();
+      fillD1DropdownsFromSection();
+    }
     
   } catch(err) {
-    console.error('❌ Error updating PIC:', err);
-    toggleButtonSpinner('btnUpdatePIC', false);
     hideLoadingOverlay();
+    console.error('❌ Error updating PIC:', err);
     alert('❌ Failed to update PIC: ' + err.message);
+  } finally {
+    toggleButtonSpinner('btnUpdatePIC', false);
   }
 }
 
